@@ -1,5 +1,8 @@
+use std::fmt;
+
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use rand::Rng;
 
 use crate::loader::loader_weapon::{
 	WeaponLoader, WeaponLoreSection, WeaponNameSection, WeaponVisualSection,
@@ -18,6 +21,25 @@ pub struct GeneratedWeapon {
 	pub condition: Option<String>,
 	pub lore: Option<String>,
 	pub visuals: Option<String>,
+}
+
+impl fmt::Display for GeneratedWeapon {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let weapon_type = self.weapon_type.as_deref().unwrap_or("unknown");
+		let rarity = self.rarity.as_deref().unwrap_or("unspecified");
+		let condition = self.condition.as_deref().unwrap_or("unspecified");
+		let lore = self.lore.as_deref().unwrap_or("none");
+		let visuals = self.visuals.as_deref().unwrap_or("none");
+
+		writeln!(f, "generated weapon")?;
+		writeln!(f, "----------------")?;
+		writeln!(f, "name      : {}", self.name)?;
+		writeln!(f, "type      : {weapon_type}")?;
+		writeln!(f, "rarity    : {rarity}")?;
+		writeln!(f, "condition : {condition}")?;
+		writeln!(f, "lore      : {lore}")?;
+		write!(f, "visuals   : {visuals}")
+	}
 }
 
 impl WeaponGenerator {
@@ -53,7 +75,7 @@ impl WeaponGenerator {
 			.as_ref()
 			.and_then(|section| choose_random(&section.condition, &mut rng));
 
-		let name = build_name(self.data.name.as_ref(), weapon_type.clone(), &mut rng);
+		let name = build_name(self.data.name.as_ref(), &mut rng);
 		let lore = build_lore(self.data.lore.as_ref(), &mut rng);
 		let visuals = build_visuals(self.data.visuals.as_ref(), &mut rng);
 
@@ -74,16 +96,12 @@ fn choose_random(list: &Option<Vec<String>>, rng: &mut rand::rngs::ThreadRng) ->
 
 fn build_name(
 	section: Option<&WeaponNameSection>,
-	weapon_type: Option<String>,
 	rng: &mut rand::rngs::ThreadRng,
 ) -> String {
 	let prefix = section.and_then(|s| choose_random(&s.prefix, rng));
-	let primitive = section.and_then(|s| choose_random(&s.primitives, rng));
 	let suffix = section.and_then(|s| choose_random(&s.suffix, rng));
 
-	let core = weapon_type
-		.or(primitive)
-		.unwrap_or_else(|| "weapon".to_string());
+	let core = build_primitive_core(section, rng).unwrap_or_else(|| "weapon".to_string());
 
 	let mut parts = Vec::new();
 	if let Some(prefix) = prefix {
@@ -95,6 +113,39 @@ fn build_name(
 	}
 
 	parts.join(" ")
+}
+
+fn build_primitive_core(
+	section: Option<&WeaponNameSection>,
+	rng: &mut rand::rngs::ThreadRng,
+) -> Option<String> {
+	let primitives = section?.primitives.as_ref()?;
+	if primitives.is_empty() {
+		return None;
+	}
+
+	let part_count = rng.gen_range(3..=5);
+	let mut core = String::new();
+
+	for _ in 0..part_count {
+		if let Some(part) = primitives.choose(rng) {
+			core.push_str(part);
+		}
+	}
+
+	if core.is_empty() {
+		None
+	} else {
+		let mut chars = core.chars();
+		if let Some(first) = chars.next() {
+			let mut capitalized = String::new();
+			capitalized.push(first.to_ascii_uppercase());
+			capitalized.push_str(chars.as_str());
+			Some(capitalized)
+		} else {
+			None
+		}
+	}
 }
 
 fn build_lore(section: Option<&WeaponLoreSection>, rng: &mut rand::rngs::ThreadRng) -> Option<String> {
@@ -142,5 +193,45 @@ mod tests {
 		let generated = generator.generate();
 
 		assert!(!generated.name.is_empty());
+
+		println!("{generated}");
+	}
+
+	#[test]
+	fn test_generated_weapon_display_looks_nice() {
+		let generated = GeneratedWeapon {
+			name: "Steel Longsword of Dawn".to_string(),
+			weapon_type: Some("longsword".to_string()),
+			rarity: Some("rare".to_string()),
+			condition: Some("pristine".to_string()),
+			lore: Some("forged by old masters".to_string()),
+			visuals: Some("silver blade with blue accents".to_string()),
+		};
+
+		let output = format!("{generated}");
+
+		assert!(output.contains("generated weapon"));
+		assert!(output.contains("name      : Steel Longsword of Dawn"));
+		assert!(output.contains("type      : longsword"));
+		assert!(output.contains("rarity    : rare"));
+		assert!(output.contains("condition : pristine"));
+		assert!(output.contains("lore      : forged by old masters"));
+		assert!(output.contains("visuals   : silver blade with blue accents"));
+	}
+
+	#[test]
+	fn test_build_primitive_core_uses_three_to_five_parts() {
+		let section = WeaponNameSection {
+			prefix: None,
+			suffix: None,
+			primitives: Some(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
+		};
+		let mut rng = thread_rng();
+
+		let core = build_primitive_core(Some(&section), &mut rng).unwrap();
+		let lowercase_core = core.to_ascii_lowercase();
+
+		assert!((3..=5).contains(&core.len()));
+		assert!(lowercase_core.chars().all(|ch| matches!(ch, 'a' | 'b' | 'c')));
 	}
 }

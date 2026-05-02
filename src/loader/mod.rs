@@ -81,13 +81,6 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
     /// expected target for this loader implementation.
     const TARGET: Target;
 
-    /// load and merge multiple files for this target.
-    ///
-    /// implementors define how section and field conflicts are resolved.
-    /// the returned document should preserve a valid header and a merged body.
-    /// return an error when `paths` is empty.
-    fn merge_from_files(paths: &[&str]) -> Result<AethelDoc<Self>, LoaderError>;
-
     /// load, parse, and target-validate a single toml file.
     fn from_file(path: impl AsRef<Path>) -> Result<AethelDoc<Self>, LoaderError> {
         let raw = fs::read_to_string(path)?;
