@@ -66,33 +66,21 @@ pub fn merge_from_files(paths: &[&str]) -> Result<Vec<MergedAethelDoc>, MergeErr
         ));
     }
 
-    let mut grouped_paths: Vec<(Target, Vec<&str>)> = Vec::new();
+    let mut weapon_paths: Vec<&str> = Vec::new();
 
     for path in paths {
         let raw = fs::read_to_string(path).map_err(LoaderError::from)?;
         let parsed: AethelDoc<toml::Table> = toml::from_str(&raw).map_err(LoaderError::from)?;
-
-        if let Some((_, matching_group_paths)) =
-            grouped_paths.iter_mut().find(|(target, _)| *target == parsed.header.target)
-        {
-            matching_group_paths.push(*path);
-        } else {
-            grouped_paths.push((parsed.header.target, vec![*path]));
+        match parsed.header.target {
+            Target::Weapon => weapon_paths.push(*path),
+            Target::Person => return Err(MergeError::UnsupportedTarget(Target::Person)),
         }
     }
 
-    let mut merged_docs = Vec::with_capacity(grouped_paths.len());
-
-    for (target, target_paths) in grouped_paths {
-        match target {
-            Target::Weapon => {
-                let merged = merge_weapon::merge_weapon_files(&target_paths)?;
-                merged_docs.push(MergedAethelDoc::Weapon(merged));
-            }
-            Target::Person => {
-                return Err(MergeError::UnsupportedTarget(Target::Person));
-            }
-        }
+    let mut merged_docs: Vec<MergedAethelDoc> = Vec::with_capacity(1);
+    if !weapon_paths.is_empty() {
+        let merged = merge_weapon::merge_weapon_files(&weapon_paths)?;
+        merged_docs.push(MergedAethelDoc::Weapon(merged));
     }
 
     Ok(merged_docs)
