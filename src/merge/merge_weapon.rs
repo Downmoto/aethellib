@@ -2,8 +2,11 @@ use crate::loader::loader_weapon::{
     WeaponLoader, WeaponLoreSection, WeaponNameSection, WeaponQualitiesSection,
     WeaponTypeSection, WeaponVisualSection,
 };
-use crate::loader::{AethelDoc, LoaderError, Target, TargetedLoader};
+use crate::loader::{AethelDoc, LoaderError, Target};
 
+/// merges a list of weapon-target files into one weapon document.
+///
+/// list values are merged with first-seen-order deduplication.
 pub fn merge_weapon_files(paths: &[&str]) -> Result<AethelDoc<WeaponLoader>, LoaderError> {
     let first_path = paths.first().ok_or_else(|| {
         LoaderError::ReadError(std::io::Error::new(
@@ -12,7 +15,7 @@ pub fn merge_weapon_files(paths: &[&str]) -> Result<AethelDoc<WeaponLoader>, Loa
         ))
     })?;
 
-    let first_loaded = <WeaponLoader as TargetedLoader>::from_file(first_path)?;
+    let first_loaded = WeaponLoader::from_file(first_path)?;
     let mut merged = AethelDoc {
         header: first_loaded.header,
         data: WeaponLoader {
@@ -25,7 +28,7 @@ pub fn merge_weapon_files(paths: &[&str]) -> Result<AethelDoc<WeaponLoader>, Loa
     };
 
     for path in paths {
-        let next = <WeaponLoader as TargetedLoader>::from_file(path)?;
+        let next = WeaponLoader::from_file(path)?;
         merge_weapon_loader(&mut merged.data, &next.data);
     }
 

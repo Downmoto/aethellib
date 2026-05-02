@@ -1,3 +1,5 @@
+//! central target-based merge orchestration for aethel documents.
+
 pub mod merge_weapon;
 
 use std::fmt;
@@ -7,9 +9,13 @@ use crate::loader::loader_weapon::WeaponLoader;
 use crate::loader::{AethelDoc, LoaderError, Target};
 
 #[derive(Debug)]
+/// merge errors returned by the module-level merge entrypoint.
 pub enum MergeError {
+    /// wraps loader-level parse/read/target errors.
     Loader(LoaderError),
+    /// reports invalid merge arguments, such as an empty file list.
     InvalidInput(String),
+    /// reports a target found in input files that has no registered merger yet.
     UnsupportedTarget(Target),
 }
 
@@ -34,11 +40,14 @@ impl From<LoaderError> for MergeError {
 }
 
 #[derive(Debug)]
+/// merged document variants keyed by target type.
 pub enum MergedAethelDoc {
+    /// merged output for weapon-target files.
     Weapon(AethelDoc<WeaponLoader>),
 }
 
 impl MergedAethelDoc {
+    /// returns the target represented by this merged document variant.
     pub fn target(&self) -> Target {
         match self {
             MergedAethelDoc::Weapon(_) => Target::Weapon,
@@ -46,6 +55,10 @@ impl MergedAethelDoc {
     }
 }
 
+/// merges a mixed list of toml files into one merged document per discovered target.
+///
+/// files are first grouped by `header.target` while preserving first-seen target order,
+/// then dispatched to each target-specific merger.
 pub fn merge_from_files(paths: &[&str]) -> Result<Vec<MergedAethelDoc>, MergeError> {
     if paths.is_empty() {
         return Err(MergeError::InvalidInput(

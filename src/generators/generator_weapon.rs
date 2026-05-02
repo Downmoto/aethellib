@@ -9,17 +9,25 @@ use crate::loader::loader_weapon::{
 };
 use crate::loader::{AethelDoc, LoaderError};
 
+/// weapon generator backed by a loaded weapon dataset.
 pub struct WeaponGenerator {
 	data: WeaponLoader,
 }
 
 #[derive(Debug)]
+/// generated weapon payload containing assembled fields.
 pub struct GeneratedWeapon {
+	/// assembled display name.
 	pub name: String,
+	/// selected weapon type, if present in source data.
 	pub weapon_type: Option<String>,
+	/// selected rarity label, if present in source data.
 	pub rarity: Option<String>,
+	/// selected condition label, if present in source data.
 	pub condition: Option<String>,
+	/// generated lore sentence, if templates are available.
 	pub lore: Option<String>,
+	/// generated visual description, if templates are available.
 	pub visuals: Option<String>,
 }
 
@@ -38,22 +46,25 @@ impl fmt::Display for GeneratedWeapon {
 		writeln!(f, "rarity    : {rarity}")?;
 		writeln!(f, "condition : {condition}")?;
 		writeln!(f, "lore      : {lore}")?;
-		write!(f, "visuals   : {visuals}")
+		write!  (f, "visuals   : {visuals}")
 	}
 }
 
 impl WeaponGenerator {
+	/// creates a generator from a loaded weapon document.
 	pub fn new(document: AethelDoc<WeaponLoader>) -> Self {
 		Self {
 			data: document.data,
 		}
 	}
 
+	/// loads weapon data from a file and creates a generator.
 	pub fn from_file(path: &str) -> Result<Self, LoaderError> {
 		let document = WeaponLoader::from_file(path)?;
 		Ok(Self::new(document))
 	}
 
+	/// builds a single generated weapon by sampling source sections.
 	pub fn generate(&self) -> GeneratedWeapon {
 		let mut rng = thread_rng();
 
