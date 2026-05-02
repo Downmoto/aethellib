@@ -1,0 +1,15 @@
+[header]
+name = "weapon merge fixture part 3"
+target = "weapon"
+
+[qualities]
+condition = ["Worn", "Pristine", "Worn"]
+
+[lore]
+creators = ["a blind blacksmith", "a mad king", "a blind blacksmith"]
+deeds = ["to slay a great beast", "to defend the innocent", "to slay a great beast"]
+quirks = ["It hums faintly when drawn.", "It is unnaturally cold to the touch.", "It hums faintly when drawn."]
+templates = [
+    "Forged by {creator} {deed}. {quirk}",
+    "Forged by {creator} {deed}. {quirk}"
+]

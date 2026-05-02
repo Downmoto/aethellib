@@ -1,0 +1,7 @@
+[header]
+name = "weapon merge fixture part 1"
+target = "weapon"
+
+[name]
+prefix = ["Iron", "Steel", "Iron"]
+suffix = ["of the Dawn", "of the Dusk", "of the Dawn"]

@@ -1,0 +1,160 @@
+[header]
+name = "weapon test set"
+target = "weapon"
+desc = "test data for aethellib"
+author = "Arad Fadaei"
+version = "1.0"
+
+[name]
+prefix = [
+    "Iron", "Steel", "Bronze", "Mythril", "Adamantine", "Obsidian", "Bone", "Dragonscale", "Silver", "Gold",
+    "Cold-Iron", "Shadowsteel", "Star-Metal", "Void-Glass", "Ancient", "Rusted", "Polished", "Engraved", "Flaming", "Frost",
+    "Shocking", "Poisonous", "Cursed", "Blessed", "Radiant", "Vampiric", "Vorpal", "Keen", "Weighted", "Balanced",
+    "Serrated", "Spiked", "Ornate", "Simple", "Crude", "Elegant", "Ghostly", "Ethereal", "Solid", "Hollow",
+    "Heavy", "Light", "Swift", "Lethal", "Blood", "Soul", "Heart", "Spirit", "Doom", "Fate",
+    "Dawn", "Dusk", "Night", "Day", "Sun", "Moon", "Star", "Storm", "Thunder", "Lightning",
+    "Fire", "Ice", "Earth", "Wind", "Sky", "Sea", "Abyss", "Heaven", "Hell", "Chaos",
+    "Order", "Justice", "Mercy", "Sorrow", "Joy", "Rage", "Calm", "Silent", "Loud", "Whispering",
+    "Screaming", "Singing", "Weeping", "Bringer", "Slayer", "Bane", "Render", "Breaker", "Shaper", "Weaver",
+    "Caller", "Ward", "Guard", "Keeper", "Seeker", "Hunter", "Drinker", "Eater", "Treader", "Walker",
+    "Born", "Kin", "Edge", "Blade", "Fang", "Claw", "Sting", "Strike", "Lash", "Crush",
+    "Smash", "Pierce", "Grim", "Dark", "Light", "Ever", "Never", "True", "False", "High",
+    "Low", "Deep", "Wild", "Holy", "Unholy", "Sacred", "Profane", "Old", "New", "Elder"
+]
+suffix = [
+    "of the Dawn", "of the Night", "of the Stars", "of the Moon", "of the Sun", "of the Void", "of the Abyss", "of the Sky", "of the Sea", "of the Earth",
+    "of the Forest", "of the Mountain", "of the Desert", "of the Tundra", "of the Wilds", "of the Ancients", "of the Fallen", "of the Brave", "of the Wise", "of the King",
+    "of the Queen", "of the Prince", "of the Princess", "of the Knight", "of the Mage", "of the Thief", "of the Warrior", "of the Hunter", "of the Slayer", "of the Dragon",
+    "of the Phoenix", "of the Wolf", "of the Lion", "of the Serpent", "of the Eagle", "of the Owl", "of the Bear", "of the Stag", "of the Eternal", "of the Infinite",
+    "of the Divine", "of the Profane", "of the Sacred", "of the Damned", "of the Blessed", "of the Cursed", "of the Lost", "of the Hidden", "of the Secret", "of the Ages",
+    "of the Shadow", "of the Light", "of the Dark", "of the Flame", "of the Frost", "of the Storm", "of the Soul", "of the Heart", "of the Spirit", "of the Ghost",
+    "of the Echo", "of the Whisper", "of the Song", "the Terrible", "the Great", "the Merciless", "the Mighty", "the Swift", "the Silent", "the Deadly",
+    "the Ancient", "the Forgotten", "the Renowned", "the Infamous", "the Noble", "the Cruel", "the Kind", "the Just", "the Unjust", "the Pure",
+    "the Corrupt", "the Radiant", "the Gloomy", "the Bright", "the Dim", "the Sharp", "the Blunt", "the Heavy", "the Light", "the Hard",
+    "the Soft", "the Cold", "the Hot", "the Burning", "the Freezing", "the Shattered", "the Broken", "the Mended", "the Forged", "the Cast",
+    "the Carved", "the Etched", "the Polished", "the Rusted", "the Weathered", "the Aged", "the New", "the Old", "the Elder", "the First", "the Last"
+]
+primitives = [
+    "ma", "to", "ra", "ten", "ka", "li", "zo", "ne", "fa", "gu",
+    "sha", "dor", "xim", "vur", "bel", "mon", "kra", "gal", "zen", "ith",
+    "aer", "oth", "val", "ryn", "syl", "tra", "mor", "gor", "lur", "thos",
+    "nar", "fin", "bor", "del", "mir", "von", "jun", "krell", "vax", "zand",
+    "tyr", "ul", "om", "en", "is", "ar", "el", "on", "ur", "yn",
+    "bal", "cor", "dag", "fen", "grim", "hal", "jar", "kul", "len", "mar",
+    "nor", "pyr", "quin", "ros", "sol", "tal", "val", "wol", "xer", "yor",
+    "zar", "bra", "cli", "dra", "fro", "glu", "kri", "pla", "ske", "tri",
+    "vla", "wra", "ash", "eon", "ion", "ian", "ius", "eus", "ous", "ath",
+    "eth", "ith", "oth", "uth", "ank", "enk", "ink", "onk", "unk", "and",
+    "end", "ind", "ond", "und", "ard", "erd", "ird", "ord", "urd", "ast",
+    "est", "ist", "ost", "ust", "alt", "elt", "ilt", "olt", "ult"
+]
+
+[type]
+type = [
+    # Bladed Weapons
+    "longsword", "claymore", "bastard sword", "rapier", "scimitar",
+    "falchion", "estoc", "gladius", "zweihander", "arming sword",
+    "cutlass", "khopesh", "katana", "wakizashi", "nodachi",
+    "flamberge", "broadsword", "shortsword", "sabre", "dirk",
+    "stiletto", "parrying dagger", "kukri", "katar", "tanto",
+
+    # Polearms and Spears
+    "spear", "halberd", "glaive", "pike", "partisan",
+    "naginata", "lance", "trident", "voulge", "bardiche",
+    "bec de corbin", "lucerne hammer", "billhook", "ranseur", "spetum",
+    "javelin", "harpoon", "yari", "guisarme", "fauchard",
+
+    # Impact and Bludgeoning
+    "war hammer", "mace", "morning star", "flail", "maul",
+    "quarterstaff", "club", "greatclub", "war pick", "crowbill",
+    "bludgeon", "scepter", "shillelagh", "iron shod staff", "tetsubo",
+
+    # Axes and Cleaving
+    "battle axe", "greataxe", "hand axe", "throwing axe", "tomahawk",
+    " Francisca", "tabar", "double-headed axe", "executioner's axe", "crescent axe",
+
+    # Ranged and Projectile
+    "longbow", "shortbow", "recurve bow", "composite bow", "flatbow",
+    "heavy crossbow", "light crossbow", "hand crossbow", "repeating crossbow", "arbalest",
+    "sling", "atlatl", "blowgun", "shuriken", "throwing knives",
+    "bolas", "boomerang", "darts", "chakram", "greatbow",
+
+    # Exotic and Specialized
+    "scythe", "sickle", "whip", "spiked chain", "war fan",
+    "hook sword", "meteor hammer", "man catcher", "net", "brass knuckles",
+    "gauntlet", "claw gauntlet", "kama", "nunchaku", "tonfa"
+]
+
+[qualities]
+rarity = [
+    "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythical"
+]
+condition = [
+    "Pristine",
+    "Polished",
+    "Serviceable",
+    "Worn",
+    "Battered",
+    "Damaged",
+    "Brittle",
+    "Broken"
+]
+
+[lore]
+creators = [
+    "a blind blacksmith", "a mad king", "an ancient cult", "a forgotten deity",
+    "a legendary hero", "a traitorous knight", "a dwarven artisan", "elven outcasts",
+    "a nameless beggar", "a grief-stricken mother", "starving peasants"
+]
+deeds = [
+    "to slay a great beast", "to betray a close friend", "to end a hundred-year war",
+    "to protect a sacred realm", "to conquer a peaceful land", "to sever a blood pact",
+    "to defend the innocent", "to assassinate an emperor", "to carve a path through the mountains"
+]
+quirks = [
+    "It is unnaturally cold to the touch.", 
+    "It hums faintly when drawn.",
+    "It smells faintly of ozone and ash.", 
+    "Shadows seem to cling to its edge.",
+    "It always feels heavier than it looks.", 
+    "Faint whispers can be heard when swung.",
+    "The blade never seems to gather dust.",
+    "It leaves a trail of faint, ghostly light."
+]
+templates = [
+    "Forged by {creator} {deed}. {quirk}",
+    "Rumoured to have been used {deed}, though its true origins are lost. {quirk}",
+    "A curious artefact originally crafted by {creator}. {quirk}",
+    "Commissioned by {creator} {deed}. {quirk}",
+    "Lost to time after being used {deed}. Now, {quirk}"
+]
+
+[visuals]
+materials = [
+    "matte black iron", "brushed steel", "darkened bronze", "pale bone",
+    "gleaming obsidian", "oxidized copper", "rough-hewn wood", 
+    "translucent crystal", "forged damascus steel", "chiseled stone"
+]
+colours = [
+    "a muted grey colour", "a deep crimson hue", "a metallic sheen",
+    "an oily, iridescent lustre", "a flat, non-reflective finish",
+    "a stark white coloration", "a dark, shadowy tint", "a pale, ghostly pallor"
+]
+accents = [
+    "wrapped in worn leather", "adorned with brass filigree",
+    "inlaid with silver tracery", "bound with coarse twine",
+    "studded with dark gems", "accented by polished wood",
+    "detailed with geometric engravings", "secured with heavy iron rivets"
+]
+features = [
+    "features harsh, angular geometry", "is covered in microscopic etchings",
+    "has an unusually smooth profile", "is pitted with age and use",
+    "displays a mesmerizing rippled pattern", "tapers to an impossibly fine point",
+    "has a heavy, brutalist design", "looks surprisingly delicate and fragile"
+]
+templates = [
+    "The weapon is primarily composed of {material}, {accent}. It possesses {colour} and {feature}.",
+    "Defined by {colour}, this piece is formed from {material} and {feature}. The grip and guard are {accent}.",
+    "A striking design made of {material} that {feature}. The entire piece exhibits {colour}, and is {accent}.",
+    "Crafted from {material} with {colour}, the weapon {feature}. It is intricately {accent}."
+]

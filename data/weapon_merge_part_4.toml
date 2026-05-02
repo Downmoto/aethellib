@@ -1,0 +1,13 @@
+[header]
+name = "weapon merge fixture part 4"
+target = "weapon"
+
+[visuals]
+materials = ["brushed steel", "oxidized copper", "brushed steel"]
+colours = ["a muted grey colour", "a deep crimson hue", "a muted grey colour"]
+accents = ["wrapped in worn leather", "adorned with brass filigree", "wrapped in worn leather"]
+features = ["features harsh, angular geometry", "is covered in microscopic etchings", "features harsh, angular geometry"]
+templates = [
+    "The weapon is primarily composed of {material}, {accent}. It possesses {colour} and {feature}.",
+    "The weapon is primarily composed of {material}, {accent}. It possesses {colour} and {feature}."
+]

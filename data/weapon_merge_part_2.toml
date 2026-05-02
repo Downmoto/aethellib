@@ -1,0 +1,13 @@
+[header]
+name = "weapon merge fixture part 2"
+target = "weapon"
+
+[name]
+prefix = ["Iron", "Steel", "Iron"]
+primitives = ["ka", "li", "ka"]
+
+[type]
+type = ["longsword", "rapier", "longsword"]
+
+[qualities]
+rarity = ["Common", "Rare", "Common"]
