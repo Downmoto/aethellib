@@ -1,24 +1,29 @@
-use std::error::Error;
+//! purpose: show how to create a weapon generator from in-memory `SourceAethelDoc` values.
 
 use aethellib::generators::generator_weapon::WeaponGenerator;
 use aethellib::loader::loader_weapon::{
     WeaponLoader, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
 };
 use aethellib::loader::{AthelDocHeader, Target};
-use aethellib::merge::merge_weapon::merge_weapon_files;
-use aethellib::merge::{AethelCorpus, SourceAethelDoc};
+use aethellib::merge::SourceAethelDoc;
 
-/// demonstrates creating a generator by loading one source file directly.
-fn example_from_file() -> Result<(), Box<dyn Error>> {
-    let generator = WeaponGenerator::from_file("data/weapon_test_data.toml")?;
-    let generated = generator.generate();
-
-    println!("from_file -> {}", generated.name.value);
-    Ok(())
+fn make_source_doc(source_id: &str, source_name: &str, data: WeaponLoader) -> SourceAethelDoc<WeaponLoader> {
+    SourceAethelDoc {
+        source_id: source_id.to_string(),
+        source_hash: format!("hash-{source_id}"),
+        source_path: format!("{source_id}.toml"),
+        header: AthelDocHeader {
+            name: source_name.to_string(),
+            target: Target::Weapon,
+            desc: None,
+            author: None,
+            version: None,
+        },
+        data,
+    }
 }
 
-/// demonstrates creating a generator from explicit source documents.
-fn example_from_documents() -> Result<(), Box<dyn Error>> {
+fn main() {
     let documents = vec![
         make_source_doc(
             "doc-a",
@@ -66,53 +71,4 @@ fn example_from_documents() -> Result<(), Box<dyn Error>> {
     let generated = generator.generate();
 
     println!("from_documents -> {}", generated.name.value);
-    Ok(())
-}
-
-/// demonstrates creating a generator from a pre-built corpus.
-fn example_new_with_corpus() -> Result<(), Box<dyn Error>> {
-    let corpus = build_weapon_corpus()?;
-    let generator = WeaponGenerator::new(corpus);
-    let generated = generator.generate();
-
-    println!("new(corpus) -> {}", generated.name.value);
-    Ok(())
-}
-
-/// builds a corpus by merging multiple weapon source files.
-fn build_weapon_corpus() -> Result<AethelCorpus<WeaponLoader>, Box<dyn Error>> {
-    let paths = [
-        "data/weapon_merge_part_1.toml",
-        "data/weapon_merge_part_2.toml",
-        "data/weapon_merge_part_3.toml",
-        "data/weapon_merge_part_4.toml",
-    ];
-
-    let corpus = merge_weapon_files(&paths)?;
-    Ok(corpus)
-}
-
-/// creates a minimal source document for manual examples.
-fn make_source_doc(source_id: &str, source_name: &str, data: WeaponLoader) -> SourceAethelDoc<WeaponLoader> {
-    SourceAethelDoc {
-        source_id: source_id.to_string(),
-        source_hash: format!("hash-{source_id}"),
-        source_path: format!("{source_id}.toml"),
-        header: AthelDocHeader {
-            name: source_name.to_string(),
-            target: Target::Weapon,
-            desc: None,
-            author: None,
-            version: None,
-        },
-        data,
-    }
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    example_from_file()?;
-    example_from_documents()?;
-    example_new_with_corpus()?;
-
-    Ok(())
 }

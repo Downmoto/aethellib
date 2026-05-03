@@ -100,6 +100,7 @@ pub fn merge_from_files(paths: &[&str]) -> Result<Vec<MergedAethelDoc>, MergeErr
         match parsed.header.target {
             Target::Weapon => weapon_paths.push(*path),
             Target::Person => return Err(MergeError::UnsupportedTarget(Target::Person)),
+            Target::Unsupported => return Err(MergeError::UnsupportedTarget(Target::Unsupported))
         }
     }
 
@@ -301,11 +302,11 @@ prefix = ["Iron"]
 
     #[test]
     fn test_merge_reports_unsupported_target() {
-        let temp_path = std::env::temp_dir().join("aethellib_person_target_test.toml");
+        let temp_path = std::env::temp_dir().join("aethellib_unsupported_target_test.toml");
         let content = r#"
 [header]
-name = "person set"
-target = "person"
+name = "unsupported set"
+target = "unsupported"
 "#;
 
         std::fs::write(&temp_path, content).unwrap();
@@ -313,7 +314,7 @@ target = "person"
         let path_string = temp_path.to_string_lossy().to_string();
         let result = merge_from_files(&[path_string.as_str()]);
 
-        assert!(matches!(result, Err(MergeError::UnsupportedTarget(Target::Person))));
+        assert!(matches!(result, Err(MergeError::UnsupportedTarget(Target::Unsupported))));
 
         std::fs::remove_file(temp_path).unwrap();
     }

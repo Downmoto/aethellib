@@ -13,6 +13,8 @@ pub enum Target {
     Weapon,
     /// person dataset target.
     Person,
+    /// non-existant target, used in Errors
+    Unsupported
 }
 
 #[derive(Deserialize, Debug, Clone)]
