@@ -1,3 +1,5 @@
+//! weapon-target loader schema and parsing helpers.
+
 use serde::Deserialize;
 
 use crate::loader::{AethelDoc, LoaderError, Target, TargetedLoader};

@@ -1,3 +1,5 @@
+//! weapon-target merge entrypoints.
+
 use crate::loader::loader_weapon::WeaponLoader;
 use crate::merge::{build_corpus_from_paths, AethelCorpus, MergeError};
 

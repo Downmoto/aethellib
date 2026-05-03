@@ -1,3 +1,5 @@
+//! loader primitives for parsing and validating aethel source documents.
+
 pub mod loader_weapon;
 
 use serde::{Deserialize, de::DeserializeOwned};
@@ -13,7 +15,7 @@ pub enum Target {
     Weapon,
     /// person dataset target.
     Person,
-    /// non-existant target, used in Errors
+    /// unsupported target, used in error handling.
     Unsupported
 }
 
@@ -54,6 +56,7 @@ pub enum LoaderError {
 }
 
 impl fmt::Display for LoaderError {
+    /// formats loader errors for user-facing messages.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LoaderError::ReadError(err) => write!(f, "unable to read toml file: {err}"),
@@ -68,12 +71,14 @@ impl fmt::Display for LoaderError {
 impl std::error::Error for LoaderError {}
 
 impl From<std::io::Error> for LoaderError {
+    /// converts io errors into loader read errors.
     fn from(value: std::io::Error) -> Self {
         LoaderError::ReadError(value)
     }
 }
 
 impl From<toml::de::Error> for LoaderError {
+    /// converts toml parsing errors into loader parse errors.
     fn from(value: toml::de::Error) -> Self {
         LoaderError::ParseError(value)
     }

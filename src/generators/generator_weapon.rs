@@ -1,3 +1,5 @@
+//! weapon generation logic backed by corpus-aware candidate indexing.
+
 use std::fmt;
 
 use rand::seq::SliceRandom;
@@ -124,6 +126,7 @@ impl WeaponGenerator {
     }
 }
 
+/// indexed candidate pools used for weapon field sampling.
 struct WeaponCandidateIndex {
     name_prefix: Vec<StringCandidate>,
     name_suffix: Vec<StringCandidate>,
@@ -143,6 +146,7 @@ struct WeaponCandidateIndex {
 }
 
 impl WeaponCandidateIndex {
+    /// builds all candidate pools from source weapon documents.
     fn from_documents(documents: &[SourceAethelDoc<WeaponLoader>]) -> Self {
         Self {
             name_prefix: build_pool(documents, "name", "prefix", |doc| {
@@ -212,6 +216,7 @@ impl WeaponCandidateIndex {
     }
 }
 
+/// chooses one candidate from a pool.
 fn choose_candidate(
     pool: &[StringCandidate],
     rng: &mut rand::rngs::ThreadRng,
@@ -219,6 +224,7 @@ fn choose_candidate(
     pool.choose(rng).cloned()
 }
 
+/// builds a generated name with aggregated provenance refs.
 fn build_name(index: &WeaponCandidateIndex, rng: &mut rand::rngs::ThreadRng) -> GeneratedField<String> {
     let prefix = choose_candidate(&index.name_prefix, rng);
     let suffix = choose_candidate(&index.name_suffix, rng);
@@ -247,6 +253,7 @@ fn build_name(index: &WeaponCandidateIndex, rng: &mut rand::rngs::ThreadRng) -> 
     }
 }
 
+/// composes a primitive core segment and returns its provenance refs.
 fn build_primitive_core(
     primitives_pool: &[StringCandidate],
     rng: &mut rand::rngs::ThreadRng,
@@ -281,6 +288,7 @@ fn build_primitive_core(
     }
 }
 
+/// chooses optional text and returns an empty fallback when no candidates exist.
 fn choose_optional_text(
     pool: &[StringCandidate],
     rng: &mut rand::rngs::ThreadRng,
@@ -291,6 +299,7 @@ fn choose_optional_text(
     }
 }
 
+/// builds lore text from template and token candidates with merged provenance.
 fn build_lore(index: &WeaponCandidateIndex, rng: &mut rand::rngs::ThreadRng) -> Option<GeneratedField<String>> {
     let template = choose_candidate(&index.lore_templates, rng)?;
     let (creator, creator_refs) = choose_optional_text(&index.lore_creators, rng);
@@ -311,6 +320,7 @@ fn build_lore(index: &WeaponCandidateIndex, rng: &mut rand::rngs::ThreadRng) -> 
     Some(GeneratedField { value, source_refs })
 }
 
+/// builds visual description text with merged provenance refs.
 fn build_visuals(
     index: &WeaponCandidateIndex,
     rng: &mut rand::rngs::ThreadRng,
@@ -497,6 +507,32 @@ mod tests {
                 .iter()
                 .any(|source| source.section == "lore" && source.field == "quirks")
         );
+    }
+
+    #[test]
+    fn test_generate_without_name_section_uses_weapon_fallback() {
+        let doc = test_source_doc(
+            "source-no-name",
+            "no-name-set",
+            WeaponLoader {
+                name: None,
+                weapon_type: Some(WeaponTypeSection {
+                    types: Some(vec!["longsword".to_string()]),
+                }),
+                qualities: Some(WeaponQualitiesSection {
+                    rarity: Some(vec!["Rare".to_string()]),
+                    condition: Some(vec!["Pristine".to_string()]),
+                }),
+                lore: None,
+                visuals: None,
+            },
+        );
+
+        let generator = WeaponGenerator::from_documents(vec![doc]);
+        let generated = generator.generate();
+
+        assert_eq!(generated.name.value, "weapon");
+        assert!(generated.name.source_refs.is_empty());
     }
 
     fn test_source_doc(

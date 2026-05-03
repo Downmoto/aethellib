@@ -113,6 +113,7 @@ pub fn merge_from_files(paths: &[&str]) -> Result<Vec<MergedAethelDoc>, MergeErr
     Ok(merged_docs)
 }
 
+/// loads and validates source files for one target, then assembles a corpus.
 pub(crate) fn build_corpus_from_paths<T>(paths: &[&str]) -> Result<AethelCorpus<T>, MergeError>
 where
     T: TargetedLoader,
@@ -155,6 +156,7 @@ where
     })
 }
 
+/// creates a unique source id from a base hash within one corpus build.
 fn make_unique_source_id(base_hash: &str, seen: &mut HashMap<String, usize>) -> String {
     let count = seen.entry(base_hash.to_string()).or_insert(0);
     *count += 1;
@@ -166,6 +168,7 @@ fn make_unique_source_id(base_hash: &str, seen: &mut HashMap<String, usize>) -> 
     }
 }
 
+/// hashes canonicalized source content with target context for stable identity.
 fn hash_source_content(target: Target, raw: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(format!("{target:?}\n"));
@@ -173,6 +176,7 @@ fn hash_source_content(target: Target, raw: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+/// normalizes source text before hashing to reduce platform-specific diffs.
 fn canonicalize_raw(raw: &str) -> String {
     raw.replace("\r\n", "\n")
         .lines()
