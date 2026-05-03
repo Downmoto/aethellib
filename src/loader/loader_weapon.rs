@@ -158,27 +158,16 @@ prefix = ["iron"]
             MergedAethelDoc::Weapon(doc) => doc,
         };
 
-        assert_eq!(loaded.header.target, Target::Weapon);
+        assert_eq!(loaded.target, Target::Weapon);
+        assert_eq!(loaded.documents.len(), 4);
+        assert_eq!(loaded.documents[0].header.name, "weapon merge fixture part 1");
+        assert_eq!(loaded.documents[1].header.name, "weapon merge fixture part 2");
+        assert_eq!(loaded.documents[2].header.name, "weapon merge fixture part 3");
+        assert_eq!(loaded.documents[3].header.name, "weapon merge fixture part 4");
 
-        let name = loaded.data.name.as_ref().unwrap();
-        assert_eq!(name.prefix.as_ref().unwrap(), &vec!["Iron", "Steel"]);
-        assert_eq!(name.suffix.as_ref().unwrap(), &vec!["of the Dawn", "of the Dusk"]);
-        assert_eq!(name.primitives.as_ref().unwrap(), &vec!["ka", "li"]);
-
-        let weapon_type = loaded.data.weapon_type.as_ref().unwrap();
-        assert_eq!(weapon_type.types.as_ref().unwrap(), &vec!["longsword", "rapier"]);
-
-        let qualities = loaded.data.qualities.as_ref().unwrap();
-        assert_eq!(qualities.rarity.as_ref().unwrap(), &vec!["Common", "Rare"]);
-        assert_eq!(qualities.condition.as_ref().unwrap(), &vec!["Worn", "Pristine"]);
-
-        let lore = loaded.data.lore.as_ref().unwrap();
-        assert_eq!(lore.templates.as_ref().unwrap().len(), 1);
-
-        let visuals = loaded.data.visuals.as_ref().unwrap();
-        assert_eq!(
-            visuals.materials.as_ref().unwrap(),
-            &vec!["brushed steel", "oxidized copper"]
-        );
+        assert!(loaded
+            .documents
+            .iter()
+            .all(|document| document.header.target == Target::Weapon));
     }
 }

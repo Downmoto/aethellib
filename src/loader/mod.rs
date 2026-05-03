@@ -17,7 +17,7 @@ pub enum Target {
 
 #[derive(Deserialize, Debug, Clone)]
 /// common metadata required in each input file header.
-pub struct TOMLHeader {
+pub struct AthelDocHeader {
     /// dataset display name.
     pub name: String,
     /// target category used for loader validation.
@@ -34,7 +34,7 @@ pub struct TOMLHeader {
 /// parsed toml payload with header plus target-specific body data.
 pub struct AethelDoc<T> {
     /// parsed file header.
-    pub header: TOMLHeader,
+    pub header: AthelDocHeader,
     /// target-specific sections flattened from the same root document.
     #[serde(flatten)]
     pub data: T,
