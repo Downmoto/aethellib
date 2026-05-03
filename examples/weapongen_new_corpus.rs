@@ -1,10 +1,10 @@
-//! purpose: show how to merge multiple files into a corpus and call `WeaponGenerator::new`.
+//! purpose: show direct `merge_weapon_files` and generic `merge_from_files` flows before `WeaponGenerator::new`.
 
 use std::error::Error;
 
 use aethellib::generators::generator_weapon::WeaponGenerator;
 use aethellib::loader::loader_weapon::WeaponLoader;
-use aethellib::merge::AethelCorpus;
+use aethellib::merge::{AethelCorpus, MergedAethelDoc, merge_from_files};
 use aethellib::merge::merge_weapon::merge_weapon_files;
 
 fn build_weapon_corpus() -> Result<AethelCorpus<WeaponLoader>, Box<dyn Error>> {
@@ -19,11 +19,38 @@ fn build_weapon_corpus() -> Result<AethelCorpus<WeaponLoader>, Box<dyn Error>> {
     Ok(corpus)
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let corpus = build_weapon_corpus()?;
-    let generator = WeaponGenerator::new(corpus);
-    let generated = generator.generate();
+fn build_weapon_corpus_via_merge_from_files() -> Result<AethelCorpus<WeaponLoader>, Box<dyn Error>> {
+    let paths = [
+        "data/weapon_merge_part_1.toml",
+        "data/weapon_merge_part_2.toml",
+        "data/weapon_merge_part_3.toml",
+        "data/weapon_merge_part_4.toml",
+    ];
 
-    println!("new(corpus) -> {}", generated.name.value);
+    let merged_docs = merge_from_files(&paths)?;
+    let Some(first) = merged_docs.into_iter().next() else {
+        return Err("expected at least one merged document".into());
+    };
+
+    match first {
+        MergedAethelDoc::Weapon(corpus) => Ok(corpus),
+    }
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let direct_corpus = build_weapon_corpus()?;
+    let direct_generator = WeaponGenerator::new(direct_corpus);
+    let direct_generated = direct_generator.generate();
+
+    println!("new(corpus) via merge_weapon_files -> {}", direct_generated.name.value);
+
+    let dispatched_corpus = build_weapon_corpus_via_merge_from_files()?;
+    let dispatched_generator = WeaponGenerator::new(dispatched_corpus);
+    let dispatched_generated = dispatched_generator.generate();
+
+    println!(
+        "new(corpus) via merge_from_files -> {}",
+        dispatched_generated.name.value
+    );
     Ok(())
 }

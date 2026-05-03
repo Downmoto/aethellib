@@ -54,9 +54,10 @@ fn main() {
                     suffix: Some(vec!["of dusk".to_string()]),
                     primitives: Some(vec!["ra".to_string(), "na".to_string()]),
                 }),
-                weapon_type: Some(WeaponTypeSection {
-                    types: Some(vec!["rapier".to_string()]),
-                }),
+
+                // does not contribute to candidate pool, this will always be "longsword"
+                weapon_type: None,                 
+
                 qualities: Some(WeaponQualitiesSection {
                     rarity: Some(vec!["common".to_string()]),
                     condition: Some(vec!["worn".to_string()]),
@@ -71,4 +72,5 @@ fn main() {
     let generated = generator.generate();
 
     println!("from_documents -> {}", generated.name.value);
+    println!("{generated}");
 }
