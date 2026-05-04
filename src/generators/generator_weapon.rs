@@ -6,12 +6,12 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 
 use crate::generators::{
-    GeneratedField, Generator, SourceRef, ValueCandidate, build_pool, extend_unique_source_refs,
+    GeneratedField, Generator, SourceRef, build_pool, extend_unique_source_refs,
+    StringCandidate
 };
 use crate::loader::loader_weapon::WeaponLoader;
 use crate::merger::{AethelCorpus, SourceAethelDoc};
 
-type StringCandidate = ValueCandidate<String>;
 
 #[derive(Debug)]
 /// generated weapon payload containing assembled fields.
@@ -86,14 +86,11 @@ impl Generator for WeaponGenerator {
 
     /// builds a single generated weapon using an injected rng.
     fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> GeneratedWeapon {
-        let weapon_type = choose_candidate(&self.index.weapon_types, rng)
-            .map(|candidate| candidate.into_generated_field());
+        let weapon_type = choose_candidate(&self.index.weapon_types, rng);
 
-        let rarity = choose_candidate(&self.index.rarity, rng)
-            .map(|candidate| candidate.into_generated_field());
+        let rarity = choose_candidate(&self.index.rarity, rng);
 
-        let condition = choose_candidate(&self.index.condition, rng)
-            .map(|candidate| candidate.into_generated_field());
+        let condition = choose_candidate(&self.index.condition, rng);
 
         let name = build_name(&self.index, rng);
         let lore = build_lore(&self.index, rng);

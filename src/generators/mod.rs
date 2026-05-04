@@ -69,24 +69,7 @@ pub struct GeneratedField<T> {
 	pub source_refs: Vec<SourceRef>,
 }
 
-#[derive(Debug, Clone)]
-/// one deduplicated candidate value plus all source refs that can produce it.
-pub(crate) struct ValueCandidate<T> {
-	/// candidate output value.
-	pub value: T,
-	/// all source refs for this candidate value.
-	pub source_refs: Vec<SourceRef>,
-}
-
-impl ValueCandidate<String> {
-	/// converts this candidate into a generated field.
-	pub fn into_generated_field(self) -> GeneratedField<String> {
-		GeneratedField {
-			value: self.value,
-			source_refs: self.source_refs,
-		}
-	}
-}
+pub(crate) type StringCandidate = GeneratedField<String>;
 
 /// adapter trait for generic candidate-pool construction from source docs.
 pub(crate) trait PoolDocument<TData> {
@@ -118,12 +101,12 @@ pub(crate) fn build_pool<TDoc, TData, F>(
 	section: &str,
 	field: &str,
 	extractor: F,
-) -> Vec<ValueCandidate<String>>
+) -> Vec<StringCandidate>
 where
 	TDoc: PoolDocument<TData>,
 	F: for<'a> Fn(&'a TData) -> Option<&'a Vec<String>>,
 {
-	let mut candidates: Vec<ValueCandidate<String>> = Vec::new();
+	let mut candidates: Vec<StringCandidate> = Vec::new();
 	let mut value_index: HashMap<String, usize> = HashMap::new();
 
 	for source in documents {
@@ -143,7 +126,7 @@ where
 				push_unique_source_ref(&mut candidates[*idx].source_refs, source_ref);
 			} else {
 				value_index.insert(value.clone(), candidates.len());
-				candidates.push(ValueCandidate {
+				candidates.push(StringCandidate {
 					value: value.clone(),
 					source_refs: vec![source_ref],
 				});

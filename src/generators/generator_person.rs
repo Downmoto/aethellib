@@ -4,12 +4,11 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 
 use crate::generators::{
-    GeneratedField, Generator, SourceRef, ValueCandidate, build_pool, extend_unique_source_refs,
+    GeneratedField, Generator, SourceRef, StringCandidate, build_pool, extend_unique_source_refs,
 };
 use crate::loader::loader_person::PersonLoader;
 use crate::merger::{AethelCorpus, SourceAethelDoc};
 
-type StringCandidate = ValueCandidate<String>;
 
 #[derive(Debug)]
 /// generated person payload containing assembled fields.
