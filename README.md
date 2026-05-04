@@ -15,6 +15,9 @@ it currently supports:
 - deterministic generation support through `generate_with_rng(...)`
 - target-extensible architecture for loaders, merge variants, and generators
 
+## Important
+`data` dir is temporary and future tests will reflect that. When removed current tests will be updated.
+
 ## installation
 
 add this crate to your `Cargo.toml`:
