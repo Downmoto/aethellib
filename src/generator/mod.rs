@@ -9,9 +9,8 @@
 pub mod generator_person;
 #[cfg(feature = "weapon-gen")]
 pub mod generator_weapon;
-
 #[cfg(any(feature = "person-gen", feature = "weapon-gen"))]
-pub(crate) mod utils;
+pub(self) mod utils;
 
 
 
@@ -20,7 +19,7 @@ use rand::thread_rng;
 
 use crate::loader::TargetedLoader;
 use crate::merger::merge_target_files;
-use crate::merger::{AethelCorpus, MergerError, SourceAethelDoc};
+use crate::merger::{AethelCorpus, error::MergerError, SourceAethelDoc};
 
 /// generic generator contract with shared constructor and generation helpers.
 pub trait Generator: Sized {
