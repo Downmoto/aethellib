@@ -2,12 +2,11 @@
 
 use std::fmt;
 
-use rand::seq::SliceRandom;
 use rand::Rng;
 
 use crate::generators::{
     GeneratedField, Generator, SourceRef, build_pool, extend_unique_source_refs,
-    StringCandidate
+    StringCandidate, choose_candidate
 };
 use crate::loader::loader_weapon::WeaponLoader;
 use crate::merger::{AethelCorpus, SourceAethelDoc};
@@ -195,14 +194,6 @@ impl WeaponCandidateIndex {
             }),
         }
     }
-}
-
-/// chooses one candidate from a pool.
-fn choose_candidate(
-    pool: &[StringCandidate],
-    rng: &mut (impl Rng + ?Sized),
-) -> Option<StringCandidate> {
-    pool.choose(rng).cloned()
 }
 
 /// builds a generated name with aggregated provenance refs.

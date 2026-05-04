@@ -1,10 +1,9 @@
 //! person generation logic backed by corpus-aware primitive indexing.
 
 use rand::Rng;
-use rand::seq::SliceRandom;
 
 use crate::generators::{
-    GeneratedField, Generator, SourceRef, StringCandidate, build_pool, extend_unique_source_refs,
+    GeneratedField, Generator, SourceRef, StringCandidate, build_pool, extend_unique_source_refs, choose_candidate
 };
 use crate::loader::loader_person::PersonLoader;
 use crate::merger::{AethelCorpus, SourceAethelDoc};
@@ -63,10 +62,7 @@ impl PersonCandidateIndex {
     }
 }
 
-/// chooses one candidate from a pool.
-fn choose_candidate(pool: &[StringCandidate], rng: &mut (impl Rng + ?Sized)) -> Option<StringCandidate> {
-    pool.choose(rng).cloned()
-}
+
 
 /// builds a generated full name with merged provenance references.
 fn build_name(index: &PersonCandidateIndex, rng: &mut (impl Rng + ?Sized)) -> GeneratedField<String> {

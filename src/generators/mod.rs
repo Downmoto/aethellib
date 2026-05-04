@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use rand::Rng;
 use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 use crate::loader::TargetedLoader;
 use crate::merger::{AethelCorpus, MergerError, SourceAethelDoc, build_corpus_from_paths};
@@ -70,6 +71,14 @@ pub struct GeneratedField<T> {
 }
 
 pub(crate) type StringCandidate = GeneratedField<String>;
+
+/// chooses one candidate from a pool.
+pub(crate) fn choose_candidate(
+    pool: &[StringCandidate],
+    rng: &mut (impl Rng + ?Sized),
+) -> Option<StringCandidate> {
+    pool.choose(rng).cloned()
+}
 
 /// adapter trait for generic candidate-pool construction from source docs.
 pub(crate) trait PoolDocument<TData> {
