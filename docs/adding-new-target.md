@@ -49,7 +49,7 @@ required change:
 - add pub mod loader_target_name;
 
 note:
-- if Target enum does not yet include the target, add a new variant.
+- define `const TARGET: &'static str` in your loader to match the header target string.
 
 ## 3. wire target into merge orchestration
 
@@ -57,27 +57,19 @@ edit file:
 - src/merge/mod.rs
 
 required changes:
-1. import target loader type
-2. extend MergedAethelDoc enum with new variant
-3. extend MergedAethelDoc accessors:
-   - target()
-   - as_target_name()
-   - into_target_name()
-4. update existing as_x and into_x match arms to handle the new variant explicitly
-5. add a public merge entrypoint in src/merge/mod.rs:
-  - merge_target_name_files(paths: &[&str]) -> Result<AethelCorpus<TargetNameLoader>, MergeError>
-6. update merge_from_files dispatch:
-   - collect MergeSourceInput values for the new target
-   - preserve first-seen target order
-   - append merged variant in order
-7. add merge tests for:
+1. no merge dispatch wiring is required for generic merge_from_files.
+2. use typed merge for your loader:
+  - merge_target_files::<TargetNameLoader>(paths, opts)
+3. for mixed-target inputs, use merge_from_files and convert each merged doc:
+  - merged_doc.into_corpus::<TargetNameLoader>()
+4. add merge tests for:
    - single-target grouping
    - mixed-target first-seen ordering
   - path-based corpus and source-based corpus equivalence
-   - new accessors
+  - typed conversion via into_corpus::<TargetNameLoader>()
 
 reference implementation:
-- src/merge/mod.rs
+- src/merger/mod.rs
 
 ## 4. add generator module
 

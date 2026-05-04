@@ -41,10 +41,12 @@ println!("weapon: {}", generated.name.value);
 ### merge mixed targets from multiple files
 
 ```rust
-use aethellib::merge::{MergedAethelDoc, merge_from_files};
+use aethellib::merger::merge_from_files;
 use aethellib::generators::Generator;
 use aethellib::generators::generator_weapon::WeaponGenerator;
 use aethellib::generators::generator_person::PersonGenerator;
+use aethellib::loader::loader_person::PersonLoader;
+use aethellib::loader::loader_weapon::WeaponLoader;
 
 let merged = merge_from_files(&[
 	"data/person_test_data.toml",
@@ -52,18 +54,23 @@ let merged = merge_from_files(&[
 ], None)?;
 
 for doc in merged {
-	match doc {
-		MergedAethelDoc::Person(corpus) => {
+	match doc.target() {
+		"person" => {
+			let corpus = doc.into_corpus::<PersonLoader>()?;
 			println!("person corpus docs: {}", corpus.documents.len());
 			let generator = PersonGenerator::new(corpus);
 			let generated = generator.generate();
 			// ...
 		}
-		MergedAethelDoc::Weapon(corpus) => {
+		"weapon" => {
+			let corpus = doc.into_corpus::<WeaponLoader>()?;
 			println!("weapon corpus docs: {}", corpus.documents.len());
 			let generator = WeaponGenerator::new(corpus);
 			let generated = generator.generate();
 			// ...
+		}
+		_ => {
+			// handle custom targets here
 		}
 	}
 }
@@ -85,6 +92,81 @@ let generated = generator.generate_with_rng(&mut rng);
 println!("person: {}", generated.name.value);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
+
+### custom target with your own loader and generator
+
+```rust
+use std::error::Error;
+
+use aethellib::generators::Generator;
+use aethellib::loader::TargetedLoader;
+use aethellib::merger::{AethelCorpus, merge_target_files};
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, Clone)]
+struct SettlementLoader {
+	settlement: Option<SettlementSection>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct SettlementSection {
+	names: Option<Vec<String>>,
+}
+
+impl TargetedLoader for SettlementLoader {
+	const TARGET: &'static str = "settlement";
+}
+
+struct SettlementGenerator {
+	names: Vec<String>,
+}
+
+impl Generator for SettlementGenerator {
+	type Loader = SettlementLoader;
+	type Output = String;
+
+	fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
+		let mut names = Vec::new();
+		for doc in corpus.documents {
+			if let Some(section) = doc.data.settlement {
+				if let Some(section_names) = section.names {
+					names.extend(section_names);
+				}
+			}
+		}
+
+		if names.is_empty() {
+			names.push("new haven".to_string());
+		}
+
+		Self { names }
+	}
+
+	fn generate_with_rng<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Self::Output {
+		use rand::seq::SliceRandom;
+
+		self.names
+			.choose(rng)
+			.cloned()
+			.unwrap_or_else(|| "new haven".to_string())
+	}
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+	let corpus = merge_target_files::<SettlementLoader>(
+		&["data/your_settlement_data.toml"],
+		None,
+	)?;
+
+	let generator = SettlementGenerator::new(corpus);
+	println!("settlement: {}", generator.generate());
+
+	Ok(())
+}
+```
+
+full runnable example:
+- [examples/custom_target_from_file.rs](examples/custom_target_from_file.rs)
 
 ## data format
 
@@ -116,13 +198,13 @@ when it is removed, tests and examples will be updated to use the replacement te
 ## architecture overview
 
 1. loaders parse and validate target (`src/loader/**`)
-2. merge builds target corpora and keeps source-level metadata (`src/merge/mod.rs`)
+2. merge builds target corpora and keeps source-level metadata (`src/merger/mod.rs`)
 3. generators build output values from corpus candidate pools (`src/generators/**`)
 
 key model types:
 - `AethelCorpus<T>`: per-target corpus with ordered source documents
 - `SourceAethelDoc<T>`: one source document with metadata + body
-- `MergedAethelDoc`: mixed-target merge result enum
+- `MergedAethelDoc`: mixed-target merge result carrying target id + untyped tables
 - `GeneratedField<T>`: generated value + provenance refs
 
 ## examples
@@ -137,6 +219,7 @@ cargo run --example weapongen_provenance_from_file
 cargo run --example weapongen_provenance_from_documents
 cargo run --example weapongen_provenance_new_corpus
 cargo run --example persongen_from_file
+cargo run --example custom_target_from_file
 ```
 
 ## adding a new target

@@ -2,8 +2,8 @@
 
 use std::error::Error;
 
-use aethellib::generators::Generator;
-use aethellib::generators::generator_weapon::WeaponGenerator;
+use aethellib::generator::Generator;
+use aethellib::generator::generator_weapon::WeaponGenerator;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let generator = WeaponGenerator::from_file("data/weapon_test_data.toml")?;

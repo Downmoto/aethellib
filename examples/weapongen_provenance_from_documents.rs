@@ -1,12 +1,12 @@
 //! purpose: show `from_documents` generation plus printing provenance source refs for generated fields.
 
-use aethellib::generators::Generator;
-use aethellib::generators::SourceRef;
-use aethellib::generators::generator_weapon::{GeneratedWeapon, WeaponGenerator};
+use aethellib::generator::Generator;
+use aethellib::generator::SourceRef;
+use aethellib::generator::generator_weapon::{GeneratedWeapon, WeaponGenerator};
 use aethellib::loader::loader_weapon::{
     WeaponLoader, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
 };
-use aethellib::loader::{AthelDocHeader, Target};
+use aethellib::loader::{AthelDocHeader, TARGET_WEAPON};
 use aethellib::merger::SourceAethelDoc;
 
 fn print_refs(refs: &[SourceRef]) {
@@ -47,7 +47,7 @@ fn make_source_doc(source_id: &str, source_name: &str, data: WeaponLoader) -> So
         source_path: format!("{source_id}.toml"),
         header: AthelDocHeader {
             name: source_name.to_string(),
-            target: Target::Weapon,
+            target: TARGET_WEAPON.to_string(),
             desc: None,
             author: None,
             version: None,

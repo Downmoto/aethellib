@@ -1,24 +1,25 @@
 //! loader primitives for parsing and validating aethel source documents.
 
+#[cfg(feature = "person-gen")]
 pub mod loader_person;
+#[cfg(feature = "weapon-gen")]
 pub mod loader_weapon;
+pub mod error;
+
 
 use serde::{Deserialize, de::DeserializeOwned};
-use std::fmt;
 use std::fs;
 use std::path::Path;
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "lowercase")]
-/// supported target categories for loader dispatch.
-pub enum Target {
-    /// weapon dataset target.
-    Weapon,
-    /// person dataset target.
-    Person,
-    /// unsupported target, used in error handling.
-    Unsupported
-}
+use crate::loader::error::LoaderError;
+
+/// open target identifier used by loaders, mergers, and generators.
+pub type Target = String;
+
+/// built-in target id for weapon schemas.
+pub const TARGET_WEAPON: &str = "weapon";
+/// built-in target id for person schemas.
+pub const TARGET_PERSON: &str = "person";
 
 #[derive(Deserialize, Debug, Clone)]
 /// common metadata required in each input file header.
@@ -44,96 +45,9 @@ pub struct AethelDoc<T> {
     #[serde(flatten)]
     pub data: T,
 }
-
-#[derive(Debug)]
-/// errors that can happen while loading and validating a toml file.
-pub enum LoaderError {
-    /// file system read failure.
-    ReadError {
-        /// optional source file path if available.
-        path: Option<String>,
-        /// underlying io source error.
-        source: std::io::Error,
-    },
-    /// toml deserialization failure.
-    ParseError {
-        /// optional source file path if available.
-        path: Option<String>,
-        /// underlying parse source error.
-        source: toml::de::Error,
-    },
-    /// file target does not match the loader target.
-    TargetMismatch { expected: Target, found: Target },
-}
-
-impl fmt::Display for LoaderError {
-    /// formats loader errors for user-facing messages.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LoaderError::ReadError { path, source } => {
-                if let Some(path) = path {
-                    write!(f, "unable to read toml file '{path}': {source}")
-                } else {
-                    write!(f, "unable to read toml file: {source}")
-                }
-            }
-            LoaderError::ParseError { path, source } => {
-                if let Some(path) = path {
-                    write!(f, "unable to parse toml file '{path}': {source}")
-                } else {
-                    write!(f, "unable to parse toml file: {source}")
-                }
-            }
-            LoaderError::TargetMismatch { expected, found } => {
-                write!(f, "target mismatch: expected {expected:?}, got {found:?}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for LoaderError {}
-
-impl From<std::io::Error> for LoaderError {
-    /// converts io errors into loader read errors.
-    fn from(value: std::io::Error) -> Self {
-        LoaderError::ReadError {
-            path: None,
-            source: value,
-        }
-    }
-}
-
-impl From<toml::de::Error> for LoaderError {
-    /// converts toml parsing errors into loader parse errors.
-    fn from(value: toml::de::Error) -> Self {
-        LoaderError::ParseError {
-            path: None,
-            source: value,
-        }
-    }
-}
-
-impl LoaderError {
-    /// creates a read error with source path context.
-    pub(crate) fn read_for_path(path: impl AsRef<Path>, source: std::io::Error) -> Self {
-        LoaderError::ReadError {
-            path: Some(path.as_ref().to_string_lossy().to_string()),
-            source,
-        }
-    }
-
-    /// creates a parse error with source path context.
-    pub(crate) fn parse_for_path(path: impl AsRef<Path>, source: toml::de::Error) -> Self {
-        LoaderError::ParseError {
-            path: Some(path.as_ref().to_string_lossy().to_string()),
-            source,
-        }
-    }
-}
-
 pub trait TargetedLoader: Sized + DeserializeOwned {
     /// expected target for this loader implementation.
-    const TARGET: Target;
+    const TARGET: &'static str;
 
     /// load, parse, and target-validate a single toml file.
     fn from_file(path: impl AsRef<Path>) -> Result<AethelDoc<Self>, LoaderError> {
@@ -145,8 +59,8 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
 
         if parsed.header.target != Self::TARGET {
             return Err(LoaderError::TargetMismatch {
-                expected: Self::TARGET,
-                found: parsed.header.target,
+                expected: Self::TARGET.to_string(),
+                found: parsed.header.target.clone(),
             });
         }
 
@@ -175,7 +89,7 @@ mod tests {
 
         let file: AethelDoc<toml::Table> = toml::from_str(&content).unwrap();
 
-        assert_eq!(file.header.target, Target::Weapon);
+        assert_eq!(file.header.target, TARGET_WEAPON);
         assert_eq!(file.header.name, "weapon test set");
         assert!(file.header.desc.is_some());
         assert!(file.header.author.is_some());
