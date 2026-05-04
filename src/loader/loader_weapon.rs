@@ -85,10 +85,28 @@ mod tests {
     use super::*;
     use crate::loader::AethelDoc;
     use crate::merger::merge_from_files;
+    use crate::test_support::{TempTomlFile, weapon_document};
 
     #[test]
     fn test_weapon_loader_deserializes_data_sections() {
-        let loaded = WeaponLoader::from_file("data/weapon_test_data.toml").unwrap();
+        let source = weapon_document(
+            "weapon fixture",
+            r#"
+[name]
+prefix = ["iron"]
+
+[type]
+type = ["sword"]
+
+[lore]
+templates = ["forged by {creator}"]
+
+[visuals]
+templates = ["{material}"]
+"#,
+        );
+        let temp = TempTomlFile::new(&source);
+        let loaded = WeaponLoader::from_file(temp.path_str()).unwrap();
 
         assert_eq!(loaded.header.target, TARGET_WEAPON);
         assert!(!loaded.data.name.unwrap().prefix.unwrap().is_empty());
@@ -141,11 +159,42 @@ prefix = ["iron"]
 
     #[test]
     fn test_weapon_loader_merges_split_fixtures_and_deduplicates_values() {
+        let first = TempTomlFile::new(&weapon_document(
+            "part 1",
+            r#"
+[name]
+prefix = ["iron"]
+"#,
+        ));
+        let second = TempTomlFile::new(&weapon_document(
+            "part 2",
+            r#"
+[name]
+suffix = ["of dawn"]
+"#,
+        ));
+        let third = TempTomlFile::new(&weapon_document(
+            "part 3",
+            r#"
+[lore]
+templates = ["forged by {creator}"]
+creators = ["unknown"]
+"#,
+        ));
+        let fourth = TempTomlFile::new(&weapon_document(
+            "part 4",
+            r#"
+[visuals]
+templates = ["{material}"]
+materials = ["steel"]
+"#,
+        ));
+
         let paths = [
-            "data/weapon_merge_part_1.toml",
-            "data/weapon_merge_part_2.toml",
-            "data/weapon_merge_part_3.toml",
-            "data/weapon_merge_part_4.toml",
+            first.path_str(),
+            second.path_str(),
+            third.path_str(),
+            fourth.path_str(),
         ];
 
         let merged_docs = merge_from_files(&paths, None).unwrap();
@@ -154,10 +203,10 @@ prefix = ["iron"]
 
         assert_eq!(loaded.target, TARGET_WEAPON);
         assert_eq!(loaded.documents.len(), 4);
-        assert_eq!(loaded.documents[0].header.name, "weapon merge fixture part 1");
-        assert_eq!(loaded.documents[1].header.name, "weapon merge fixture part 2");
-        assert_eq!(loaded.documents[2].header.name, "weapon merge fixture part 3");
-        assert_eq!(loaded.documents[3].header.name, "weapon merge fixture part 4");
+        assert_eq!(loaded.documents[0].header.name, "part 1");
+        assert_eq!(loaded.documents[1].header.name, "part 2");
+        assert_eq!(loaded.documents[2].header.name, "part 3");
+        assert_eq!(loaded.documents[3].header.name, "part 4");
 
         assert!(loaded
             .documents

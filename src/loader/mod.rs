@@ -71,21 +71,29 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::loader::loader_weapon::WeaponLoader;
-    use std::fs;
+    use crate::test_support::{TempTomlFile, toml_document};
+    use serde::Deserialize;
 
-    const FILE_PATH: &str = "data/weapon_test_data.toml";
+    #[derive(Deserialize, Debug)]
+    struct TestWeaponLoader;
 
-    #[test]
-    fn test_open_toml_file() {
-        let content = fs::read_to_string(FILE_PATH);
-
-        assert!(content.is_ok(), "Unable to read toml file at {FILE_PATH}")
+    impl TargetedLoader for TestWeaponLoader {
+        const TARGET: &'static str = TARGET_WEAPON;
     }
 
     #[test]
     fn test_read_toml_aethellib_header() {
-        let content = fs::read_to_string(FILE_PATH).unwrap();
+        let content = r#"
+[header]
+name = "weapon test set"
+target = "weapon"
+desc = "fixture description"
+author = "fixture author"
+version = "1.0"
+
+[name]
+prefix = ["iron"]
+"#;
 
         let file: AethelDoc<toml::Table> = toml::from_str(&content).unwrap();
 
@@ -121,23 +129,43 @@ name = "example"
     }
 
     #[test]
-    fn test_loader_error_includes_path_for_read_failures() {
-        let missing_path = "data/does_not_exist.toml";
-        let err = WeaponLoader::from_file(missing_path).unwrap_err();
+    fn test_targeted_loader_reads_valid_file() {
+        let temp = TempTomlFile::new(&toml_document("valid set", TARGET_WEAPON, ""));
 
-        assert!(err.to_string().contains(missing_path));
+        let loaded = TestWeaponLoader::from_file(temp.path_str()).unwrap();
+
+        assert_eq!(loaded.header.target, TARGET_WEAPON);
+    }
+
+    #[test]
+    fn test_targeted_loader_rejects_target_mismatch() {
+        let temp = TempTomlFile::new(&toml_document("wrong target", TARGET_PERSON, ""));
+
+        let err = TestWeaponLoader::from_file(temp.path_str()).unwrap_err();
+
+        assert!(matches!(
+            err,
+            LoaderError::TargetMismatch { expected, found }
+            if expected == TARGET_WEAPON && found == TARGET_PERSON
+        ));
+    }
+
+    #[test]
+    fn test_loader_error_includes_path_for_read_failures() {
+        let missing_path = std::env::temp_dir()
+            .join("aethellib_missing_loader_input.toml")
+            .to_string_lossy()
+            .to_string();
+        let err = TestWeaponLoader::from_file(missing_path.as_str()).unwrap_err();
+
+        assert!(err.to_string().contains(missing_path.as_str()));
     }
 
     #[test]
     fn test_loader_error_includes_path_for_parse_failures() {
-        let temp_path = std::env::temp_dir().join("aethellib_invalid_loader_input.toml");
-        std::fs::write(&temp_path, "not valid toml = [").unwrap();
+        let temp = TempTomlFile::new("not valid toml = [");
+        let err = TestWeaponLoader::from_file(temp.path_str()).unwrap_err();
 
-        let path_string = temp_path.to_string_lossy().to_string();
-        let err = WeaponLoader::from_file(path_string.as_str()).unwrap_err();
-
-        assert!(err.to_string().contains(path_string.as_str()));
-
-        std::fs::remove_file(temp_path).unwrap();
+        assert!(err.to_string().contains(temp.path_str()));
     }
 }

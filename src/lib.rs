@@ -6,3 +6,7 @@ pub mod generator;
 pub mod loader;
 /// merge module entrypoint.
 pub mod merger;
+
+#[cfg(test)]
+/// shared test helpers for inline fixtures and temp files.
+pub(crate) mod test_support;

@@ -1,3 +1,5 @@
+//! loader-specific error types with optional source-path context.
+
 use std::{fmt, path::Path};
 
 use crate::loader::Target;
@@ -85,5 +87,43 @@ impl LoaderError {
             path: Some(path.as_ref().to_string_lossy().to_string()),
             source,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display_formats_target_mismatch() {
+        let error = LoaderError::TargetMismatch {
+            expected: "weapon".to_string(),
+            found: "person".to_string(),
+        };
+
+        assert_eq!(
+            error.to_string(),
+            "target mismatch: expected 'weapon', got 'person'"
+        );
+    }
+
+    #[test]
+    fn test_read_for_path_includes_path_in_message() {
+        let error = LoaderError::read_for_path(
+            "custom-file.toml",
+            std::io::Error::new(std::io::ErrorKind::NotFound, "missing"),
+        );
+
+        assert!(error.to_string().contains("custom-file.toml"));
+        assert!(matches!(error, LoaderError::ReadError { path: Some(_), .. }));
+    }
+
+    #[test]
+    fn test_parse_for_path_includes_path_in_message() {
+        let parse_source = toml::from_str::<toml::Table>("[").unwrap_err();
+        let error = LoaderError::parse_for_path("invalid.toml", parse_source);
+
+        assert!(error.to_string().contains("invalid.toml"));
+        assert!(matches!(error, LoaderError::ParseError { path: Some(_), .. }));
     }
 }

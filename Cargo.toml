@@ -21,3 +21,31 @@ built-in = ["weapon-gen", "person-gen"]
 # generator features
 weapon-gen = []
 person-gen = []
+
+[[example]]
+name = "persongen_from_file"
+required-features = ["person-gen"]
+
+[[example]]
+name = "weapongen_from_file"
+required-features = ["weapon-gen"]
+
+[[example]]
+name = "weapongen_from_documents"
+required-features = ["weapon-gen"]
+
+[[example]]
+name = "weapongen_new_corpus"
+required-features = ["weapon-gen"]
+
+[[example]]
+name = "weapongen_provenance_from_file"
+required-features = ["weapon-gen"]
+
+[[example]]
+name = "weapongen_provenance_from_documents"
+required-features = ["weapon-gen"]
+
+[[example]]
+name = "weapongen_provenance_new_corpus"
+required-features = ["weapon-gen"]

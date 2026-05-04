@@ -334,9 +334,65 @@ mod tests {
         WeaponVisualSection,
     };
 
+    fn test_source_doc(
+        source_id: &str,
+        name: &str,
+        data: WeaponLoader,
+    ) -> SourceAethelDoc<WeaponLoader> {
+        SourceAethelDoc {
+            source_id: source_id.to_string(),
+            source_hash: format!("hash-{source_id}"),
+            source_path: format!("{source_id}.toml"),
+            header: AthelDocHeader {
+                name: name.to_string(),
+                target: TARGET_WEAPON.to_string(),
+                desc: None,
+                author: None,
+                version: None,
+            },
+            data,
+        }
+    }
+
+    fn build_weapon_fixture_generator() -> WeaponGenerator {
+        let doc = test_source_doc(
+            "source-fixture",
+            "fixture set",
+            WeaponLoader {
+                name: Some(WeaponNameSection {
+                    prefix: Some(vec!["Iron".to_string(), "Steel".to_string()]),
+                    suffix: Some(vec!["of Dawn".to_string(), "of Ember".to_string()]),
+                    primitives: Some(vec!["ka".to_string(), "ri".to_string(), "dor".to_string()]),
+                }),
+                weapon_type: Some(WeaponTypeSection {
+                    types: Some(vec!["longsword".to_string(), "axe".to_string()]),
+                }),
+                qualities: Some(WeaponQualitiesSection {
+                    rarity: Some(vec!["Rare".to_string(), "Uncommon".to_string()]),
+                    condition: Some(vec!["Pristine".to_string(), "Worn".to_string()]),
+                }),
+                lore: Some(WeaponLoreSection {
+                    creators: Some(vec!["a blind smith".to_string()]),
+                    deeds: Some(vec!["to guard the vale".to_string()]),
+                    quirks: Some(vec!["it sings softly".to_string()]),
+                    templates: Some(vec!["forged by {creator} {deed}. {quirk}".to_string()]),
+                }),
+                visuals: Some(WeaponVisualSection {
+                    materials: Some(vec!["steel".to_string()]),
+                    colours: Some(vec!["grey".to_string()]),
+                    accents: Some(vec!["in leather".to_string()]),
+                    features: Some(vec!["etched with runes".to_string()]),
+                    templates: Some(vec!["made of {material}, {accent}, {colour}, {feature}".to_string()]),
+                }),
+            },
+        );
+
+        WeaponGenerator::from_documents(vec![doc])
+    }
+
     #[test]
     fn test_dbg_random_weapon() {
-        let generator = WeaponGenerator::from_file("data/weapon_test_data.toml").unwrap();
+        let generator = build_weapon_fixture_generator();
         let generated = generator.generate();
 
         assert!(!generated.name.value.is_empty());
@@ -385,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_generate_with_rng_is_deterministic_for_same_seed() {
-        let generator = WeaponGenerator::from_file("data/weapon_test_data.toml").unwrap();
+        let generator = build_weapon_fixture_generator();
 
         let mut rng_a = StdRng::seed_from_u64(42);
         let mut rng_b = StdRng::seed_from_u64(42);
@@ -544,25 +600,5 @@ mod tests {
 
         assert_eq!(generated.name.value, "weapon");
         assert!(generated.name.source_refs.is_empty());
-    }
-
-    fn test_source_doc(
-        source_id: &str,
-        name: &str,
-        data: WeaponLoader,
-    ) -> SourceAethelDoc<WeaponLoader> {
-        SourceAethelDoc {
-            source_id: source_id.to_string(),
-            source_hash: format!("hash-{source_id}"),
-            source_path: format!("{source_id}.toml"),
-            header: AthelDocHeader {
-                name: name.to_string(),
-                target: TARGET_WEAPON.to_string(),
-                desc: None,
-                author: None,
-                version: None,
-            },
-            data,
-        }
     }
 }

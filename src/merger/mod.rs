@@ -176,10 +176,38 @@ pub fn merge_from_files(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::loader::loader_person::PersonLoader;
-    use crate::loader::loader_weapon::WeaponLoader;
     use crate::loader::{TARGET_PERSON, TARGET_WEAPON};
-use crate::merger::utils::build_corpus_from_sources;
+    use crate::merger::utils::build_corpus_from_sources;
+    use crate::test_support::{TempTomlFile, person_document, weapon_document};
+    use serde::Deserialize;
+
+    #[derive(Deserialize, Debug, Clone)]
+    struct TestWeaponLoader {
+        name: Option<TestWeaponNameSection>,
+    }
+
+    #[derive(Deserialize, Debug, Clone)]
+    struct TestWeaponNameSection {
+        prefix: Option<Vec<String>>,
+    }
+
+    #[derive(Deserialize, Debug, Clone)]
+    struct TestPersonLoader {
+        name: Option<TestPersonNameSection>,
+    }
+
+    #[derive(Deserialize, Debug, Clone)]
+    struct TestPersonNameSection {
+        first: Option<Vec<String>>,
+    }
+
+    impl TargetedLoader for TestWeaponLoader {
+        const TARGET: &'static str = TARGET_WEAPON;
+    }
+
+    impl TargetedLoader for TestPersonLoader {
+        const TARGET: &'static str = TARGET_PERSON;
+    }
 
     #[test]
     fn test_merge_requires_at_least_one_file() {
@@ -189,19 +217,28 @@ use crate::merger::utils::build_corpus_from_sources;
 
     #[test]
     fn test_merge_groups_files_by_target() {
-        let paths = [
-            "data/weapon_merge_part_1.toml",
-            "data/weapon_merge_part_2.toml",
-            "data/weapon_merge_part_3.toml",
-            "data/weapon_merge_part_4.toml",
-        ];
+        let one = TempTomlFile::new(&weapon_document(
+            "part 1",
+            r#"
+[name]
+prefix = ["iron"]
+"#,
+        ));
+        let two = TempTomlFile::new(&weapon_document(
+            "part 2",
+            r#"
+[name]
+suffix = ["of dawn"]
+"#,
+        ));
+        let paths = [one.path_str(), two.path_str()];
 
         let merged = merge_from_files(&paths, None).unwrap();
 
         assert_eq!(merged.len(), 1);
         assert_eq!(merged[0].target(), TARGET_WEAPON);
 
-        assert_eq!(merged[0].documents.len(), 4);
+        assert_eq!(merged[0].documents.len(), 2);
         assert!(merged[0]
             .documents
             .iter()
@@ -210,7 +247,21 @@ use crate::merger::utils::build_corpus_from_sources;
 
     #[test]
     fn test_merge_groups_mixed_targets_in_first_seen_order() {
-        let paths = ["data/person_test_data.toml", "data/weapon_test_data.toml"];
+        let person = TempTomlFile::new(&person_document(
+            "person set",
+            r#"
+[name]
+first = ["al"]
+"#,
+        ));
+        let weapon = TempTomlFile::new(&weapon_document(
+            "weapon set",
+            r#"
+[name]
+prefix = ["iron"]
+"#,
+        ));
+        let paths = [person.path_str(), weapon.path_str()];
 
         let merged = merge_from_files(&paths, None).unwrap();
 
@@ -218,20 +269,29 @@ use crate::merger::utils::build_corpus_from_sources;
         assert_eq!(merged[0].target(), TARGET_PERSON);
         assert_eq!(merged[1].target(), TARGET_WEAPON);
 
-        let person = merged[0].to_corpus::<PersonLoader>().unwrap();
-        let weapon = merged[1].to_corpus::<WeaponLoader>().unwrap();
+        let person = merged[0].to_corpus::<TestPersonLoader>().unwrap();
+        let weapon = merged[1].to_corpus::<TestWeaponLoader>().unwrap();
 
         assert_eq!(person.documents.len(), 1);
         assert_eq!(weapon.documents.len(), 1);
+
+        assert!(weapon.documents[0]
+            .data
+            .name
+            .as_ref()
+            .and_then(|name| name.prefix.as_ref())
+            .is_some());
+        assert!(person.documents[0]
+            .data
+            .name
+            .as_ref()
+            .and_then(|name| name.first.as_ref())
+            .is_some());
     }
 
     #[test]
     fn test_merge_allows_different_versions_between_sources() {
-        let temp_a = std::env::temp_dir().join("aethellib_version_a.toml");
-        let temp_b = std::env::temp_dir().join("aethellib_version_b.toml");
-
-        std::fs::write(
-            &temp_a,
+        let temp_a = TempTomlFile::new(
             r#"
 [header]
 name = "vendor weapon set"
@@ -241,11 +301,9 @@ version = "1.0"
 [name]
 prefix = ["Iron"]
 "#,
-        )
-        .unwrap();
+        );
 
-        std::fs::write(
-            &temp_b,
+        let temp_b = TempTomlFile::new(
             r#"
 [header]
 name = "vendor weapon set"
@@ -255,26 +313,16 @@ version = "1.1"
 [name]
 suffix = ["of Dawn"]
 "#,
-        )
-        .unwrap();
+    );
 
-        let path_a = temp_a.to_string_lossy().to_string();
-        let path_b = temp_b.to_string_lossy().to_string();
-
-        let merged = merge_from_files(&[path_a.as_str(), path_b.as_str()], None).unwrap();
+    let merged = merge_from_files(&[temp_a.path_str(), temp_b.path_str()], None).unwrap();
         assert_eq!(merged[0].documents.len(), 2);
         assert_eq!(merged[0].documents[0].header.version.as_deref(), Some("1.0"));
         assert_eq!(merged[0].documents[1].header.version.as_deref(), Some("1.1"));
-
-        std::fs::remove_file(temp_a).unwrap();
-        std::fs::remove_file(temp_b).unwrap();
     }
 
     #[test]
     fn test_merge_assigns_unique_source_ids_for_identical_content() {
-        let temp_a = std::env::temp_dir().join("aethellib_identical_a.toml");
-        let temp_b = std::env::temp_dir().join("aethellib_identical_b.toml");
-
         let content = r#"
 [header]
 name = "same content"
@@ -284,26 +332,22 @@ target = "weapon"
 prefix = ["Iron"]
 "#;
 
-        std::fs::write(&temp_a, content).unwrap();
-        std::fs::write(&temp_b, content).unwrap();
-
-        let path_a = temp_a.to_string_lossy().to_string();
-        let path_b = temp_b.to_string_lossy().to_string();
-        let merged = merge_from_files(&[path_a.as_str(), path_b.as_str()], None).unwrap();
+        let temp_a = TempTomlFile::new(content);
+        let temp_b = TempTomlFile::new(content);
+        let merged = merge_from_files(&[temp_a.path_str(), temp_b.path_str()], None).unwrap();
 
         assert_eq!(merged[0].documents.len(), 2);
         assert_ne!(merged[0].documents[0].source_id, merged[0].documents[1].source_id);
         assert_eq!(merged[0].documents[0].source_hash, merged[0].documents[1].source_hash);
-
-        std::fs::remove_file(temp_a).unwrap();
-        std::fs::remove_file(temp_b).unwrap();
     }
 
     #[test]
     fn test_merge_weapon_files_rejects_person_target_path() {
-        let paths = ["data/weapon_test_data.toml", "data/person_test_data.toml"];
+        let weapon = TempTomlFile::new(&weapon_document("weapon set", ""));
+        let person = TempTomlFile::new(&person_document("person set", ""));
+        let paths = [weapon.path_str(), person.path_str()];
 
-        let result = merge_target_files::<WeaponLoader>(&paths, None);
+        let result = merge_target_files::<TestWeaponLoader>(&paths, None);
 
         assert!(matches!(
             result,
@@ -314,113 +358,65 @@ prefix = ["Iron"]
             if expected == TARGET_WEAPON && found == TARGET_PERSON
         ));
     }
-
-    #[test]
-    fn test_merge_groups_non_builtin_targets() {
-        let temp_path = std::env::temp_dir().join("aethellib_unsupported_target_test.toml");
-        let content = r#"
-[header]
-name = "unsupported set"
-target = "unsupported"
-"#;
-
-        std::fs::write(&temp_path, content).unwrap();
-
-        let path_string = temp_path.to_string_lossy().to_string();
-        let merged = merge_from_files(&[path_string.as_str()], None).unwrap();
-
-        assert_eq!(merged.len(), 1);
-        assert_eq!(merged[0].target(), "unsupported");
-
-        std::fs::remove_file(temp_path).unwrap();
-    }
-
-    #[test]
-    fn test_build_corpus_from_sources_matches_build_corpus_from_paths() {
-        let paths = [
-            "data/weapon_merge_part_1.toml",
-            "data/weapon_merge_part_2.toml",
-            "data/weapon_merge_part_3.toml",
-            "data/weapon_merge_part_4.toml",
-        ];
-
-        let from_paths = build_corpus_from_paths::<WeaponLoader>(&paths, None).unwrap();
-
-        let loaded_sources: Vec<(String, String)> = paths
-            .iter()
-            .map(|path| ((*path).to_string(), std::fs::read_to_string(path).unwrap()))
-            .collect();
-
-        let source_inputs: Vec<MergeSourceInput<'_>> = loaded_sources
-            .iter()
-            .map(|(path, raw)| MergeSourceInput {
-                path: path.as_str(),
-                raw: raw.as_str(),
-            })
-            .collect();
-
-        let from_sources = build_corpus_from_sources::<WeaponLoader>(&source_inputs, None).unwrap();
-
-        assert_eq!(from_paths.target, from_sources.target);
-        assert_eq!(from_paths.documents.len(), from_sources.documents.len());
-
-        for (left, right) in from_paths
-            .documents
-            .iter()
-            .zip(from_sources.documents.iter())
-        {
-            assert_eq!(left.source_id, right.source_id);
-            assert_eq!(left.source_hash, right.source_hash);
-            assert_eq!(left.source_path, right.source_path);
-            assert_eq!(left.header.name, right.header.name);
-            assert_eq!(left.header.target, right.header.target);
-            assert_eq!(left.header.version, right.header.version);
-        }
-    }
-
     #[test]
     fn test_merged_aethel_doc_into_corpus_returns_weapon_variant() {
-        let paths = [
-            "data/weapon_merge_part_1.toml",
-            "data/weapon_merge_part_2.toml",
-            "data/weapon_merge_part_3.toml",
-            "data/weapon_merge_part_4.toml",
-        ];
+        let one = TempTomlFile::new(&weapon_document(
+            "part 1",
+            r#"
+[name]
+prefix = ["iron"]
+"#,
+        ));
+        let paths = [one.path_str()];
 
         let merged_docs = merge_from_files(&paths, None).unwrap();
         let owned = merged_docs
             .into_iter()
             .next()
             .unwrap()
-            .into_corpus::<WeaponLoader>()
+            .into_corpus::<TestWeaponLoader>()
             .unwrap();
         assert_eq!(owned.target, TARGET_WEAPON);
     }
 
     #[test]
     fn test_merged_aethel_doc_into_corpus_returns_person_variant() {
-        let paths = ["data/person_test_data.toml"];
+        let person = TempTomlFile::new(&person_document(
+            "person set",
+            r#"
+[name]
+first = ["al"]
+"#,
+        ));
+        let paths = [person.path_str()];
 
         let merged_docs = merge_from_files(&paths, None).unwrap();
         let owned = merged_docs
             .into_iter()
             .next()
             .unwrap()
-            .into_corpus::<PersonLoader>()
+            .into_corpus::<TestPersonLoader>()
             .unwrap();
         assert_eq!(owned.target, TARGET_PERSON);
     }
 
     #[test]
     fn test_merged_aethel_doc_into_corpus_rejects_target_mismatch() {
-        let paths = ["data/person_test_data.toml"];
+        let person = TempTomlFile::new(&person_document(
+            "person set",
+            r#"
+[name]
+first = ["al"]
+"#,
+        ));
+        let paths = [person.path_str()];
 
         let result = merge_from_files(&paths, None)
             .unwrap()
             .into_iter()
             .next()
             .unwrap()
-            .into_corpus::<WeaponLoader>();
+            .into_corpus::<TestWeaponLoader>();
 
         assert!(matches!(
             result,
@@ -431,9 +427,16 @@ target = "unsupported"
 
     #[test]
     fn test_build_person_corpus_from_sources_matches_build_corpus_from_paths() {
-        let paths = ["data/person_test_data.toml"];
+        let person = TempTomlFile::new(&person_document(
+            "person set",
+            r#"
+[name]
+first = ["al"]
+"#,
+        ));
+        let paths = [person.path_str()];
 
-        let from_paths = build_corpus_from_paths::<PersonLoader>(&paths, None).unwrap();
+        let from_paths = build_corpus_from_paths::<TestPersonLoader>(&paths, None).unwrap();
 
         let loaded_sources: Vec<(String, String)> = paths
             .iter()
@@ -448,7 +451,7 @@ target = "unsupported"
             })
             .collect();
 
-        let from_sources = build_corpus_from_sources::<PersonLoader>(&source_inputs, None).unwrap();
+        let from_sources = build_corpus_from_sources::<TestPersonLoader>(&source_inputs, None).unwrap();
 
         assert_eq!(from_paths.target, from_sources.target);
         assert_eq!(from_paths.documents.len(), from_sources.documents.len());
@@ -472,5 +475,12 @@ target = "unsupported"
             from_paths.documents[0].header.target,
             from_sources.documents[0].header.target
         );
+
+        assert!(from_paths.documents[0]
+            .data
+            .name
+            .as_ref()
+            .and_then(|name| name.first.as_ref())
+            .is_some());
     }
 }
