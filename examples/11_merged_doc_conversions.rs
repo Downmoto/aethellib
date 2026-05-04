@@ -32,6 +32,7 @@ impl TargetedLoader for BetaLoader {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // start from a generic mixed-target merge output.
     let alpha = TempTomlFile::new(&toml_document(
         "alpha dataset",
         "alpha",
@@ -39,6 +40,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     ));
     let merged = merge_from_files(&[alpha.path_str()], None)?;
 
+    // to_corpus clones the merged doc internally, so the original value remains
+    // available for more conversions.
     let borrowed = merged[0].to_corpus::<AlphaLoader>()?;
     assert_eq!(borrowed.target, AlphaLoader::TARGET);
     assert_eq!(borrowed.documents.len(), 1);
@@ -51,6 +54,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some("alpha-name")
     );
 
+    // converting with the wrong loader target returns a typed mismatch error.
     match merged[0].to_corpus::<BetaLoader>() {
         Err(MergerError::Loader(LoaderError::TargetMismatch { .. })) => {
             println!("mismatch conversion rejected as expected")
@@ -58,6 +62,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         _ => unreachable!("expected target mismatch for wrong loader"),
     }
 
+    // into_corpus consumes the merged value (or a clone of it), which can be
+    // preferable when you do not need the untyped version afterwards.
     let owned = merged[0].clone().into_corpus::<AlphaLoader>()?;
     println!("into_corpus consumed clone with {} document", owned.documents.len());
 

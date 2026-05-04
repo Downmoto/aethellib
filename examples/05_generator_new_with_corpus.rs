@@ -6,6 +6,8 @@ use aethellib::loader::{AthelDocHeader, TARGET_WEAPON, loader_weapon::{WeaponLoa
 use aethellib::merger::{AethelCorpus, SourceAethelDoc};
 
 fn main() {
+    // new is the lowest-level constructor. you provide a fully shaped corpus,
+    // and the generator indexes it directly.
     let corpus = AethelCorpus {
         target: TARGET_WEAPON.to_string(),
         documents: vec![SourceAethelDoc {
@@ -33,6 +35,7 @@ fn main() {
         }],
     };
 
+    // choose this path when you need complete control over corpus assembly.
     let generator = WeaponGenerator::new(corpus);
     let generated = generator.generate();
 

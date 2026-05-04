@@ -20,6 +20,8 @@ pub struct TempTomlFile {
 impl TempTomlFile {
     /// creates a new temporary toml file with provided content.
     pub fn new(content: &str) -> Self {
+        // include both time and a process-local counter so quick successive
+        // writes still get unique file names.
         let sequence = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -43,12 +45,16 @@ impl TempTomlFile {
 
 impl Drop for TempTomlFile {
     fn drop(&mut self) {
+        // examples should clean up after themselves; ignore remove errors since
+        // the file may already be gone in edge cases.
         let _ = fs::remove_file(&self.path);
     }
 }
 
 /// builds a minimal toml document with a header and optional body.
 pub fn toml_document(name: &str, target: &str, body: &str) -> String {
+    // normalise optional body whitespace so examples can use indented raw
+    // string literals without affecting final file layout.
     let trimmed_body = body.trim();
 
     if trimmed_body.is_empty() {

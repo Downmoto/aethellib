@@ -9,6 +9,8 @@ use std::error::Error;
 use support::{TempTomlFile, toml_document};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // create two docs with the same header.name to exercise option-driven
+    // duplicate handling.
     let one = TempTomlFile::new(&toml_document(
         "duplicate header",
         "custom",
@@ -21,9 +23,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     ));
     let paths = [one.path_str(), two.path_str()];
 
+    // default behaviour allows duplicates, so this should succeed.
     let default_ok = merge_from_files(&paths, None)?;
     assert_eq!(default_ok.len(), 1);
 
+    // strict mode rejects duplicate header.name values and returns a specific
+    // merger option error variant.
     let strict = merge_from_files(
         &paths,
         Some(MergeOptions {

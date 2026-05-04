@@ -9,6 +9,8 @@ use std::error::Error;
 use support::{TempTomlFile, weapon_document};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // this inline toml defines a complete weapon dataset in one place so readers
+    // can see exactly which sections feed each generated field.
     let fixture = TempTomlFile::new(&weapon_document(
         "weapon demo",
         r#"
@@ -39,9 +41,16 @@ templates = ["a {colour} {material} blade with {accent} and {feature}."]
 "#,
     ));
 
+    // from_file performs load + parse + target validation, then builds the
+    // generator from a one-document corpus under the hood.
     let generator = WeaponGenerator::from_file(fixture.path_str())?;
+
+    // generate uses thread-local randomness, which is ideal for "just run it"
+    // behaviour in quick examples.
     let generated = generator.generate();
 
+    // generated weapon implements display, so this prints all major fields
+    // (name/type/qualities/lore/visuals) in a readable multi-line block.
     println!("{}", generated);
     Ok(())
 }

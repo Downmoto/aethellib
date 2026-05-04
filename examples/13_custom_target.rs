@@ -42,6 +42,7 @@ impl Generator for SettlementGenerator {
     type Output = GeneratedSettlement;
 
     fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
+        // flatten all source docs into local candidate pools.
         let mut starts = Vec::new();
         let mut ends = Vec::new();
 
@@ -60,6 +61,8 @@ impl Generator for SettlementGenerator {
     }
 
     fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::Output {
+        // choose random parts with sensible fallbacks so generation still works
+        // if an input corpus is sparse.
         let start = self
             .starts
             .choose(rng)
@@ -81,6 +84,8 @@ impl Generator for SettlementGenerator {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // custom targets can use the same header contract; only target body shape
+    // and generator logic need to be defined by the caller.
     let fixture = TempTomlFile::new(&toml_document(
         "settlement data",
         "settlement",
@@ -91,6 +96,7 @@ ends = ["ford", "mere", "hold"]
 "#,
     ));
 
+    // from_file works because SettlementLoader implements TargetedLoader.
     let generator = SettlementGenerator::from_file(fixture.path_str())?;
     let generated = generator.generate();
 

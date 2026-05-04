@@ -6,7 +6,11 @@ use aethellib::loader::{AthelDocHeader, TARGET_WEAPON, loader_weapon::{WeaponLoa
 use aethellib::merger::SourceAethelDoc;
 
 fn main() {
+    // from_documents skips file i/o entirely. this is useful when your caller
+    // already has validated source documents in memory.
     let documents = vec![
+        // source ids/hashes/paths are caller-defined in this entrypoint, so
+        // you can align them with your own provenance system.
         SourceAethelDoc {
             source_id: "source-a".to_string(),
             source_hash: "hash-a".to_string(),
@@ -60,6 +64,8 @@ fn main() {
     ];
 
     let generator = WeaponGenerator::from_documents(documents);
+
+    // generation logic is unchanged regardless of how the corpus was built.
     let generated = generator.generate();
 
     println!("generated from documents: {}", generated.name.value);

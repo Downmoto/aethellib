@@ -54,7 +54,8 @@ start with these:
 | merged doc conversion (`MergedAethelDoc::to_corpus`, `MergedAethelDoc::into_corpus`) | [examples/11_merged_doc_conversions.rs](examples/11_merged_doc_conversions.rs) |
 | provenance (`GeneratedField<T>`, `SourceRef`) | [examples/12_weapon_provenance.rs](examples/12_weapon_provenance.rs) |
 | custom target extensibility (`TargetedLoader`, `Generator`) | [examples/13_custom_target.rs](examples/13_custom_target.rs) |
-| parsed aetheldoc entry (`Generator::from_aethel_doc`, `AethelDoc<T>`) | [examples/14_generator_from_aetheldoc.rs](examples/14_generator_from_aetheldoc.rs) |
+| parsed aetheldoc casting (`TryFrom<AethelDoc<T>>`, `SourceAethelDoc<T>`) | [examples/14_generator_from_aetheldoc.rs](examples/14_generator_from_aetheldoc.rs) |
+| single parsed aetheldoc cast (`TryFrom<AethelDoc<T>>`, `Generator::from_documents`) | [examples/15_generator_from_aetheldoc_single.rs](examples/15_generator_from_aetheldoc_single.rs) |
 
 ## data format
 
@@ -107,6 +108,7 @@ cargo run --example 11_merged_doc_conversions
 cargo run --example 12_weapon_provenance --features weapon-gen
 cargo run --example 13_custom_target
 cargo run --example 14_generator_from_aetheldoc --features weapon-gen
+cargo run --example 15_generator_from_aetheldoc_single --features weapon-gen
 ```
 
 ## adding a new target

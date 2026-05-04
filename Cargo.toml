@@ -72,3 +72,7 @@ name = "13_custom_target"
 [[example]]
 name = "14_generator_from_aetheldoc"
 required-features = ["weapon-gen"]
+
+[[example]]
+name = "15_generator_from_aetheldoc_single"
+required-features = ["weapon-gen"]

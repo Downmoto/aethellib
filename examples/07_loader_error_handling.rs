@@ -17,18 +17,21 @@ impl TargetedLoader for EmptyLoader {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // 1) read error: file is missing, so filesystem load fails before parsing.
     let missing_path = std::env::temp_dir().join("aethellib_missing_example_input.toml");
     match EmptyLoader::from_file(&missing_path) {
         Err(LoaderError::ReadError { .. }) => println!("read error handled"),
         _ => unreachable!("expected read error"),
     }
 
+    // 2) parse error: file exists, but toml syntax is invalid.
     let malformed = TempTomlFile::new("not valid toml = [");
     match EmptyLoader::from_file(malformed.path_str()) {
         Err(LoaderError::ParseError { .. }) => println!("parse error handled"),
         _ => unreachable!("expected parse error"),
     }
 
+    // 3) target mismatch: parsed header.target does not match loader TARGET.
     let mismatch = TempTomlFile::new(
         "[header]\nname = \"wrong target\"\ntarget = \"person\"\n",
     );
@@ -41,6 +44,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         _ => unreachable!("expected target mismatch"),
     }
 
+    // direct parsing into AethelDoc is useful when you want to inspect raw
+    // structured content without invoking TargetedLoader validation.
     let parsed: AethelDoc<toml::Table> = toml::from_str(
         "[header]\nname = \"demo\"\ntarget = \"weapon\"\n",
     )?;
