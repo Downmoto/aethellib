@@ -48,9 +48,19 @@ pub struct AethelDoc<T> {
 /// errors that can happen while loading and validating a toml file.
 pub enum LoaderError {
     /// file system read failure.
-    ReadError(std::io::Error),
+    ReadError {
+        /// optional source file path if available.
+        path: Option<String>,
+        /// underlying io source error.
+        source: std::io::Error,
+    },
     /// toml deserialization failure.
-    ParseError(toml::de::Error),
+    ParseError {
+        /// optional source file path if available.
+        path: Option<String>,
+        /// underlying parse source error.
+        source: toml::de::Error,
+    },
     /// file target does not match the loader target.
     TargetMismatch { expected: Target, found: Target },
 }
@@ -59,8 +69,20 @@ impl fmt::Display for LoaderError {
     /// formats loader errors for user-facing messages.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LoaderError::ReadError(err) => write!(f, "unable to read toml file: {err}"),
-            LoaderError::ParseError(err) => write!(f, "unable to parse toml file: {err}"),
+            LoaderError::ReadError { path, source } => {
+                if let Some(path) = path {
+                    write!(f, "unable to read toml file '{path}': {source}")
+                } else {
+                    write!(f, "unable to read toml file: {source}")
+                }
+            }
+            LoaderError::ParseError { path, source } => {
+                if let Some(path) = path {
+                    write!(f, "unable to parse toml file '{path}': {source}")
+                } else {
+                    write!(f, "unable to parse toml file: {source}")
+                }
+            }
             LoaderError::TargetMismatch { expected, found } => {
                 write!(f, "target mismatch: expected {expected:?}, got {found:?}")
             }
@@ -73,14 +95,38 @@ impl std::error::Error for LoaderError {}
 impl From<std::io::Error> for LoaderError {
     /// converts io errors into loader read errors.
     fn from(value: std::io::Error) -> Self {
-        LoaderError::ReadError(value)
+        LoaderError::ReadError {
+            path: None,
+            source: value,
+        }
     }
 }
 
 impl From<toml::de::Error> for LoaderError {
     /// converts toml parsing errors into loader parse errors.
     fn from(value: toml::de::Error) -> Self {
-        LoaderError::ParseError(value)
+        LoaderError::ParseError {
+            path: None,
+            source: value,
+        }
+    }
+}
+
+impl LoaderError {
+    /// creates a read error with source path context.
+    pub(crate) fn read_for_path(path: impl AsRef<Path>, source: std::io::Error) -> Self {
+        LoaderError::ReadError {
+            path: Some(path.as_ref().to_string_lossy().to_string()),
+            source,
+        }
+    }
+
+    /// creates a parse error with source path context.
+    pub(crate) fn parse_for_path(path: impl AsRef<Path>, source: toml::de::Error) -> Self {
+        LoaderError::ParseError {
+            path: Some(path.as_ref().to_string_lossy().to_string()),
+            source,
+        }
     }
 }
 
@@ -90,8 +136,11 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
 
     /// load, parse, and target-validate a single toml file.
     fn from_file(path: impl AsRef<Path>) -> Result<AethelDoc<Self>, LoaderError> {
-        let raw = fs::read_to_string(path)?;
-        let parsed: AethelDoc<Self> = toml::from_str(&raw)?;
+        let path_ref = path.as_ref();
+        let raw = fs::read_to_string(path_ref)
+            .map_err(|source| LoaderError::read_for_path(path_ref, source))?;
+        let parsed: AethelDoc<Self> = toml::from_str(&raw)
+            .map_err(|source| LoaderError::parse_for_path(path_ref, source))?;
 
         if parsed.header.target != Self::TARGET {
             return Err(LoaderError::TargetMismatch {
@@ -107,6 +156,7 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::loader::loader_weapon::WeaponLoader;
     use std::fs;
 
     const FILE_PATH: &str = "data/weapon_test_data.toml";
@@ -115,7 +165,7 @@ mod tests {
     fn test_open_toml_file() {
         let content = fs::read_to_string(FILE_PATH);
 
-        assert!(!content.is_err(), "Unable to read toml file at {FILE_PATH}")
+        assert!(content.is_ok(), "Unable to read toml file at {FILE_PATH}")
     }
 
     #[test]
@@ -153,5 +203,26 @@ name = "example"
         let file = toml::from_str::<AethelDoc<toml::Table>>(content);
 
         assert!(file.is_err());
+    }
+
+    #[test]
+    fn test_loader_error_includes_path_for_read_failures() {
+        let missing_path = "data/does_not_exist.toml";
+        let err = WeaponLoader::from_file(missing_path).unwrap_err();
+
+        assert!(err.to_string().contains(missing_path));
+    }
+
+    #[test]
+    fn test_loader_error_includes_path_for_parse_failures() {
+        let temp_path = std::env::temp_dir().join("aethellib_invalid_loader_input.toml");
+        std::fs::write(&temp_path, "not valid toml = [").unwrap();
+
+        let path_string = temp_path.to_string_lossy().to_string();
+        let err = WeaponLoader::from_file(path_string.as_str()).unwrap_err();
+
+        assert!(err.to_string().contains(path_string.as_str()));
+
+        std::fs::remove_file(temp_path).unwrap();
     }
 }

@@ -156,9 +156,7 @@ prefix = ["iron"]
 
         let merged_docs = merge_from_files(&paths).unwrap();
         assert_eq!(merged_docs.len(), 1);
-        let loaded = match &merged_docs[0] {
-            MergedAethelDoc::Weapon(doc) => doc,
-        };
+        let MergedAethelDoc::Weapon(loaded) = &merged_docs[0];
 
         assert_eq!(loaded.target, Target::Weapon);
         assert_eq!(loaded.documents.len(), 4);

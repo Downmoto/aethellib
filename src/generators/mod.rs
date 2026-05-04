@@ -2,6 +2,8 @@
 //!
 //! this module exposes concrete generators that build runtime content
 //! from loaded and validated aethel documents.
+//! generators should expose a convenience `generate()` method and
+//! a deterministic `generate_with_rng(...)` method for reproducible tests.
 
 use std::collections::HashMap;
 

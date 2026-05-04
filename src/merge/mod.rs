@@ -10,6 +10,21 @@ use std::fs;
 use crate::loader::loader_weapon::WeaponLoader;
 use crate::loader::{AethelDoc, AthelDocHeader, LoaderError, Target, TargetedLoader};
 
+/// parsed source used by merge dispatch before target-specific ingestion.
+struct ParsedMergeInput {
+    path: String,
+    raw: String,
+    target: Target,
+}
+
+/// source payload used by target-specific corpus builders.
+pub(crate) struct MergeSourceInput<'a> {
+    /// original source path used for loading.
+    pub path: &'a str,
+    /// raw source content used for parsing and hashing.
+    pub raw: &'a str,
+}
+
 #[derive(Debug)]
 /// merge errors returned by the module-level merge entrypoint.
 pub enum MergeError {
@@ -79,6 +94,20 @@ impl MergedAethelDoc {
             MergedAethelDoc::Weapon(_) => Target::Weapon,
         }
     }
+
+    /// returns a shared reference to a weapon corpus when this variant is weapon.
+    pub fn as_weapon(&self) -> Option<&AethelCorpus<WeaponLoader>> {
+        match self {
+            MergedAethelDoc::Weapon(corpus) => Some(corpus),
+        }
+    }
+
+    /// consumes this value and returns a weapon corpus when this variant is weapon.
+    pub fn into_weapon(self) -> Option<AethelCorpus<WeaponLoader>> {
+        match self {
+            MergedAethelDoc::Weapon(corpus) => Some(corpus),
+        }
+    }
 }
 
 /// merges a mixed list of toml files into one merged document per discovered target.
@@ -92,25 +121,46 @@ pub fn merge_from_files(paths: &[&str]) -> Result<Vec<MergedAethelDoc>, MergeErr
         ));
     }
 
-    let mut weapon_paths: Vec<&str> = Vec::new();
+    let parsed_inputs = parse_merge_inputs(paths)?;
+    let mut weapon_sources: Vec<MergeSourceInput<'_>> = Vec::new();
 
-    for path in paths {
-        let raw = fs::read_to_string(path).map_err(LoaderError::from)?;
-        let parsed: AethelDoc<toml::Table> = toml::from_str(&raw).map_err(LoaderError::from)?;
-        match parsed.header.target {
-            Target::Weapon => weapon_paths.push(*path),
+    for input in &parsed_inputs {
+        match input.target {
+            Target::Weapon => weapon_sources.push(MergeSourceInput {
+                path: &input.path,
+                raw: &input.raw,
+            }),
             Target::Person => return Err(MergeError::UnsupportedTarget(Target::Person)),
-            Target::Unsupported => return Err(MergeError::UnsupportedTarget(Target::Unsupported))
+            Target::Unsupported => return Err(MergeError::UnsupportedTarget(Target::Unsupported)),
         }
     }
 
     let mut merged_docs: Vec<MergedAethelDoc> = Vec::with_capacity(1);
-    if !weapon_paths.is_empty() {
-        let merged = merge_weapon::merge_weapon_files(&weapon_paths)?;
+    if !weapon_sources.is_empty() {
+        let merged = merge_weapon::merge_weapon_sources(&weapon_sources)?;
         merged_docs.push(MergedAethelDoc::Weapon(merged));
     }
 
     Ok(merged_docs)
+}
+
+/// parses source files once so dispatch and target ingestion share the same payload.
+fn parse_merge_inputs(paths: &[&str]) -> Result<Vec<ParsedMergeInput>, MergeError> {
+    let mut parsed_inputs = Vec::with_capacity(paths.len());
+
+    for path in paths {
+        let raw = fs::read_to_string(path).map_err(|source| LoaderError::read_for_path(path, source))?;
+        let parsed: AethelDoc<toml::Table> = toml::from_str(&raw)
+            .map_err(|source| LoaderError::parse_for_path(path, source))?;
+
+        parsed_inputs.push(ParsedMergeInput {
+            path: (*path).to_string(),
+            raw,
+            target: parsed.header.target,
+        });
+    }
+
+    Ok(parsed_inputs)
 }
 
 /// loads and validates source files for one target, then assembles a corpus.
@@ -124,12 +174,43 @@ where
         ));
     }
 
-    let mut seen_source_ids: HashMap<String, usize> = HashMap::new();
-    let mut documents: Vec<SourceAethelDoc<T>> = Vec::with_capacity(paths.len());
+    let mut sources: Vec<(String, String)> = Vec::with_capacity(paths.len());
 
     for path in paths {
-        let raw = fs::read_to_string(path).map_err(LoaderError::from)?;
-        let parsed: AethelDoc<T> = toml::from_str(&raw).map_err(LoaderError::from)?;
+        let raw = fs::read_to_string(path).map_err(|source| LoaderError::read_for_path(path, source))?;
+        sources.push(((*path).to_string(), raw));
+    }
+
+    let source_refs: Vec<MergeSourceInput<'_>> = sources
+        .iter()
+        .map(|(path, raw)| MergeSourceInput {
+            path: path.as_str(),
+            raw: raw.as_str(),
+        })
+        .collect();
+
+    build_corpus_from_sources::<T>(&source_refs)
+}
+
+/// assembles a target corpus from already-loaded source payloads.
+pub(crate) fn build_corpus_from_sources<T>(
+    sources: &[MergeSourceInput<'_>],
+) -> Result<AethelCorpus<T>, MergeError>
+where
+    T: TargetedLoader,
+{
+    if sources.is_empty() {
+        return Err(MergeError::InvalidInput(
+            "at least one path is required for merge".to_string(),
+        ));
+    }
+
+    let mut seen_source_ids: HashMap<String, usize> = HashMap::new();
+    let mut documents: Vec<SourceAethelDoc<T>> = Vec::with_capacity(sources.len());
+
+    for source in sources {
+        let parsed: AethelDoc<T> = toml::from_str(source.raw)
+            .map_err(|err| LoaderError::parse_for_path(source.path, err))?;
 
         if parsed.header.target != T::TARGET {
             return Err(MergeError::Loader(LoaderError::TargetMismatch {
@@ -138,13 +219,13 @@ where
             }));
         }
 
-        let source_hash = hash_source_content(parsed.header.target, &raw);
+        let source_hash = hash_source_content(parsed.header.target, source.raw);
         let source_id = make_unique_source_id(&source_hash, &mut seen_source_ids);
 
         documents.push(SourceAethelDoc {
             source_id,
             source_hash,
-            source_path: (*path).to_string(),
+            source_path: source.path.to_string(),
             header: parsed.header,
             data: parsed.data,
         });
@@ -190,6 +271,7 @@ fn canonicalize_raw(raw: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::loader::loader_weapon::WeaponLoader;
 
     #[test]
     fn test_merge_requires_at_least_one_file() {
@@ -321,5 +403,68 @@ target = "unsupported"
         assert!(matches!(result, Err(MergeError::UnsupportedTarget(Target::Unsupported))));
 
         std::fs::remove_file(temp_path).unwrap();
+    }
+
+    #[test]
+    fn test_build_corpus_from_sources_matches_build_corpus_from_paths() {
+        let paths = [
+            "data/weapon_merge_part_1.toml",
+            "data/weapon_merge_part_2.toml",
+            "data/weapon_merge_part_3.toml",
+            "data/weapon_merge_part_4.toml",
+        ];
+
+        let from_paths = build_corpus_from_paths::<WeaponLoader>(&paths).unwrap();
+
+        let loaded_sources: Vec<(String, String)> = paths
+            .iter()
+            .map(|path| {
+                (
+                    (*path).to_string(),
+                    std::fs::read_to_string(path).unwrap(),
+                )
+            })
+            .collect();
+
+        let source_inputs: Vec<MergeSourceInput<'_>> = loaded_sources
+            .iter()
+            .map(|(path, raw)| MergeSourceInput {
+                path: path.as_str(),
+                raw: raw.as_str(),
+            })
+            .collect();
+
+        let from_sources = build_corpus_from_sources::<WeaponLoader>(&source_inputs).unwrap();
+
+        assert_eq!(from_paths.target, from_sources.target);
+        assert_eq!(from_paths.documents.len(), from_sources.documents.len());
+
+        for (left, right) in from_paths.documents.iter().zip(from_sources.documents.iter()) {
+            assert_eq!(left.source_id, right.source_id);
+            assert_eq!(left.source_hash, right.source_hash);
+            assert_eq!(left.source_path, right.source_path);
+            assert_eq!(left.header.name, right.header.name);
+            assert_eq!(left.header.target, right.header.target);
+            assert_eq!(left.header.version, right.header.version);
+        }
+    }
+
+    #[test]
+    fn test_merged_aethel_doc_accessors_return_weapon_variant() {
+        let paths = [
+            "data/weapon_merge_part_1.toml",
+            "data/weapon_merge_part_2.toml",
+            "data/weapon_merge_part_3.toml",
+            "data/weapon_merge_part_4.toml",
+        ];
+
+        let merged_docs = merge_from_files(&paths).unwrap();
+        let weapon_ref = merged_docs[0].as_weapon();
+        assert!(weapon_ref.is_some());
+        assert_eq!(weapon_ref.unwrap().target, Target::Weapon);
+
+        let owned = merged_docs.into_iter().next().unwrap().into_weapon();
+        assert!(owned.is_some());
+        assert_eq!(owned.unwrap().target, Target::Weapon);
     }
 }

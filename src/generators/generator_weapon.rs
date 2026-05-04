@@ -101,19 +101,23 @@ impl WeaponGenerator {
     /// builds a single generated weapon by sampling indexed candidates.
     pub fn generate(&self) -> GeneratedWeapon {
         let mut rng = thread_rng();
+        self.generate_with_rng(&mut rng)
+    }
 
-        let weapon_type = choose_candidate(&self.index.weapon_types, &mut rng)
+    /// builds a single generated weapon using an injected rng.
+    pub fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> GeneratedWeapon {
+        let weapon_type = choose_candidate(&self.index.weapon_types, rng)
             .map(|candidate| candidate.into_generated_field());
 
-        let rarity = choose_candidate(&self.index.rarity, &mut rng)
+        let rarity = choose_candidate(&self.index.rarity, rng)
             .map(|candidate| candidate.into_generated_field());
 
-        let condition = choose_candidate(&self.index.condition, &mut rng)
+        let condition = choose_candidate(&self.index.condition, rng)
             .map(|candidate| candidate.into_generated_field());
 
-        let name = build_name(&self.index, &mut rng);
-        let lore = build_lore(&self.index, &mut rng);
-        let visuals = build_visuals(&self.index, &mut rng);
+        let name = build_name(&self.index, rng);
+        let lore = build_lore(&self.index, rng);
+        let visuals = build_visuals(&self.index, rng);
 
         GeneratedWeapon {
             name,
@@ -219,13 +223,13 @@ impl WeaponCandidateIndex {
 /// chooses one candidate from a pool.
 fn choose_candidate(
     pool: &[StringCandidate],
-    rng: &mut rand::rngs::ThreadRng,
+    rng: &mut (impl Rng + ?Sized),
 ) -> Option<StringCandidate> {
     pool.choose(rng).cloned()
 }
 
 /// builds a generated name with aggregated provenance refs.
-fn build_name(index: &WeaponCandidateIndex, rng: &mut rand::rngs::ThreadRng) -> GeneratedField<String> {
+fn build_name(index: &WeaponCandidateIndex, rng: &mut (impl Rng + ?Sized)) -> GeneratedField<String> {
     let prefix = choose_candidate(&index.name_prefix, rng);
     let suffix = choose_candidate(&index.name_suffix, rng);
     let (core, core_refs) = build_primitive_core(&index.name_primitives, rng)
@@ -256,7 +260,7 @@ fn build_name(index: &WeaponCandidateIndex, rng: &mut rand::rngs::ThreadRng) -> 
 /// composes a primitive core segment and returns its provenance refs.
 fn build_primitive_core(
     primitives_pool: &[StringCandidate],
-    rng: &mut rand::rngs::ThreadRng,
+    rng: &mut (impl Rng + ?Sized),
 ) -> Option<(String, Vec<SourceRef>)> {
     if primitives_pool.is_empty() {
         return None;
@@ -291,7 +295,7 @@ fn build_primitive_core(
 /// chooses optional text and returns an empty fallback when no candidates exist.
 fn choose_optional_text(
     pool: &[StringCandidate],
-    rng: &mut rand::rngs::ThreadRng,
+    rng: &mut (impl Rng + ?Sized),
 ) -> (String, Vec<SourceRef>) {
     match choose_candidate(pool, rng) {
         Some(candidate) => (candidate.value, candidate.source_refs),
@@ -300,7 +304,10 @@ fn choose_optional_text(
 }
 
 /// builds lore text from template and token candidates with merged provenance.
-fn build_lore(index: &WeaponCandidateIndex, rng: &mut rand::rngs::ThreadRng) -> Option<GeneratedField<String>> {
+fn build_lore(
+    index: &WeaponCandidateIndex,
+    rng: &mut (impl Rng + ?Sized),
+) -> Option<GeneratedField<String>> {
     let template = choose_candidate(&index.lore_templates, rng)?;
     let (creator, creator_refs) = choose_optional_text(&index.lore_creators, rng);
     let (deed, deed_refs) = choose_optional_text(&index.lore_deeds, rng);
@@ -323,7 +330,7 @@ fn build_lore(index: &WeaponCandidateIndex, rng: &mut rand::rngs::ThreadRng) -> 
 /// builds visual description text with merged provenance refs.
 fn build_visuals(
     index: &WeaponCandidateIndex,
-    rng: &mut rand::rngs::ThreadRng,
+    rng: &mut (impl Rng + ?Sized),
 ) -> Option<GeneratedField<String>> {
     let template = choose_candidate(&index.visual_templates, rng)?;
     let (material, material_refs) = choose_optional_text(&index.visual_materials, rng);
@@ -350,6 +357,8 @@ fn build_visuals(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
     use crate::loader::AthelDocHeader;
     use crate::loader::loader_weapon::{
         WeaponLoreSection, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
@@ -404,6 +413,40 @@ mod tests {
         assert!(output.contains("condition : pristine"));
         assert!(output.contains("lore      : forged by old masters"));
         assert!(output.contains("visuals   : silver blade with blue accents"));
+    }
+
+    #[test]
+    fn test_generate_with_rng_is_deterministic_for_same_seed() {
+        let generator = WeaponGenerator::from_file("data/weapon_test_data.toml").unwrap();
+
+        let mut rng_a = StdRng::seed_from_u64(42);
+        let mut rng_b = StdRng::seed_from_u64(42);
+
+        let generated_a = generator.generate_with_rng(&mut rng_a);
+        let generated_b = generator.generate_with_rng(&mut rng_b);
+
+        assert_eq!(generated_a.name.value, generated_b.name.value);
+        assert_eq!(generated_a.name.source_refs, generated_b.name.source_refs);
+        assert_eq!(
+            generated_a.weapon_type.as_ref().map(|field| &field.value),
+            generated_b.weapon_type.as_ref().map(|field| &field.value)
+        );
+        assert_eq!(
+            generated_a.rarity.as_ref().map(|field| &field.value),
+            generated_b.rarity.as_ref().map(|field| &field.value)
+        );
+        assert_eq!(
+            generated_a.condition.as_ref().map(|field| &field.value),
+            generated_b.condition.as_ref().map(|field| &field.value)
+        );
+        assert_eq!(
+            generated_a.lore.as_ref().map(|field| &field.value),
+            generated_b.lore.as_ref().map(|field| &field.value)
+        );
+        assert_eq!(
+            generated_a.visuals.as_ref().map(|field| &field.value),
+            generated_b.visuals.as_ref().map(|field| &field.value)
+        );
     }
 
     #[test]
