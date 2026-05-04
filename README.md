@@ -15,9 +15,6 @@ it currently supports:
 - deterministic generation support through `generate_with_rng(...)`
 - target-extensible architecture for loaders, merge variants, and generators
 
-## Important
-`data` dir is temporary and future tests will reflect that. When removed current tests will be updated.
-
 ## installation
 
 add this crate to your `Cargo.toml`:
@@ -110,6 +107,11 @@ target sections are target-specific:
 see reference fixtures in:
 - [data/weapon_test_data.toml](data/weapon_test_data.toml)
 - [data/person_test_data.toml](data/person_test_data.toml)
+
+## important
+
+the `data` directory is temporary and only exists to support the current fixtures and examples.
+when it is removed, tests and examples will be updated to use the replacement test data flow.
 
 ## architecture overview
 
