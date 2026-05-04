@@ -9,7 +9,7 @@ use crate::generators::{
     GeneratedField, Generator, SourceRef, ValueCandidate, build_pool, extend_unique_source_refs,
 };
 use crate::loader::loader_weapon::WeaponLoader;
-use crate::merge::{AethelCorpus, SourceAethelDoc};
+use crate::merger::{AethelCorpus, SourceAethelDoc};
 
 type StringCandidate = ValueCandidate<String>;
 

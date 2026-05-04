@@ -49,7 +49,7 @@ use aethellib::generators::generator_person::PersonGenerator;
 let merged = merge_from_files(&[
 	"data/person_test_data.toml",
 	"data/weapon_test_data.toml",
-])?;
+], None)?;
 
 for doc in merged {
 	match doc {

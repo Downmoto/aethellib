@@ -6,7 +6,7 @@ use aethellib::loader::loader_weapon::{
     WeaponLoader, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
 };
 use aethellib::loader::{AthelDocHeader, Target};
-use aethellib::merge::SourceAethelDoc;
+use aethellib::merger::SourceAethelDoc;
 
 fn make_source_doc(source_id: &str, source_name: &str, data: WeaponLoader) -> SourceAethelDoc<WeaponLoader> {
     SourceAethelDoc {

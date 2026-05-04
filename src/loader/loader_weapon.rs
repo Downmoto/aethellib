@@ -84,7 +84,7 @@ impl TargetedLoader for WeaponLoader {
 mod tests {
     use super::*;
     use crate::loader::AethelDoc;
-    use crate::merge::{merge_from_files, MergedAethelDoc};
+    use crate::merger::{merge_from_files, MergedAethelDoc};
 
     #[test]
     fn test_weapon_loader_deserializes_data_sections() {
@@ -148,7 +148,7 @@ prefix = ["iron"]
             "data/weapon_merge_part_4.toml",
         ];
 
-        let merged_docs = merge_from_files(&paths).unwrap();
+        let merged_docs = merge_from_files(&paths, None).unwrap();
         assert_eq!(merged_docs.len(), 1);
         let loaded = match &merged_docs[0] {
             MergedAethelDoc::Weapon(doc) => doc,

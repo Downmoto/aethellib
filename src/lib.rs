@@ -5,4 +5,4 @@ pub mod generators;
 /// loader module entrypoint.
 pub mod loader;
 /// merge module entrypoint.
-pub mod merge;
+pub mod merger;

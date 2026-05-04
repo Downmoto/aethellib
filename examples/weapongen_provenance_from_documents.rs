@@ -7,7 +7,7 @@ use aethellib::loader::loader_weapon::{
     WeaponLoader, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
 };
 use aethellib::loader::{AthelDocHeader, Target};
-use aethellib::merge::SourceAethelDoc;
+use aethellib::merger::SourceAethelDoc;
 
 fn print_refs(refs: &[SourceRef]) {
     for source in refs {

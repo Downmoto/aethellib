@@ -11,7 +11,7 @@ use rand::Rng;
 use rand::thread_rng;
 
 use crate::loader::TargetedLoader;
-use crate::merge::{AethelCorpus, MergeError, SourceAethelDoc, build_corpus_from_paths};
+use crate::merger::{AethelCorpus, MergerError, SourceAethelDoc, build_corpus_from_paths};
 
 /// generic generator contract with shared constructor and generation helpers.
 pub trait Generator: Sized {
@@ -35,8 +35,8 @@ pub trait Generator: Sized {
 	}
 
 	/// loads one target file and creates a corpus-backed generator.
-	fn from_file(path: &str) -> Result<Self, MergeError> {
-		let corpus = build_corpus_from_paths::<Self::Loader>(&[path])?;
+	fn from_file(path: &str) -> Result<Self, MergerError> {
+		let corpus = build_corpus_from_paths::<Self::Loader>(&[path], None)?;
 		Ok(Self::new(corpus))
 	}
 

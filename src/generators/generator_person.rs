@@ -7,7 +7,7 @@ use crate::generators::{
     GeneratedField, Generator, SourceRef, ValueCandidate, build_pool, extend_unique_source_refs,
 };
 use crate::loader::loader_person::PersonLoader;
-use crate::merge::{AethelCorpus, SourceAethelDoc};
+use crate::merger::{AethelCorpus, SourceAethelDoc};
 
 type StringCandidate = ValueCandidate<String>;
 
