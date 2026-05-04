@@ -5,7 +5,7 @@ use aethellib::generators::generator_weapon::WeaponGenerator;
 use aethellib::loader::loader_weapon::{
     WeaponLoader, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
 };
-use aethellib::loader::{AthelDocHeader, Target};
+use aethellib::loader::{AthelDocHeader, TARGET_WEAPON};
 use aethellib::merger::SourceAethelDoc;
 
 fn make_source_doc(source_id: &str, source_name: &str, data: WeaponLoader) -> SourceAethelDoc<WeaponLoader> {
@@ -15,7 +15,7 @@ fn make_source_doc(source_id: &str, source_name: &str, data: WeaponLoader) -> So
         source_path: format!("{source_id}.toml"),
         header: AthelDocHeader {
             name: source_name.to_string(),
-            target: Target::Weapon,
+            target: TARGET_WEAPON.to_string(),
             desc: None,
             author: None,
             version: None,

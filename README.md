@@ -86,6 +86,81 @@ println!("person: {}", generated.name.value);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
+### custom target with your own loader and generator
+
+```rust
+use std::error::Error;
+
+use aethellib::generators::Generator;
+use aethellib::loader::TargetedLoader;
+use aethellib::merger::{AethelCorpus, merge_target_files};
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, Clone)]
+struct SettlementLoader {
+	settlement: Option<SettlementSection>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct SettlementSection {
+	names: Option<Vec<String>>,
+}
+
+impl TargetedLoader for SettlementLoader {
+	const TARGET: &'static str = "settlement";
+}
+
+struct SettlementGenerator {
+	names: Vec<String>,
+}
+
+impl Generator for SettlementGenerator {
+	type Loader = SettlementLoader;
+	type Output = String;
+
+	fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
+		let mut names = Vec::new();
+		for doc in corpus.documents {
+			if let Some(section) = doc.data.settlement {
+				if let Some(section_names) = section.names {
+					names.extend(section_names);
+				}
+			}
+		}
+
+		if names.is_empty() {
+			names.push("new haven".to_string());
+		}
+
+		Self { names }
+	}
+
+	fn generate_with_rng<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Self::Output {
+		use rand::seq::SliceRandom;
+
+		self.names
+			.choose(rng)
+			.cloned()
+			.unwrap_or_else(|| "new haven".to_string())
+	}
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+	let corpus = merge_target_files::<SettlementLoader>(
+		&["data/your_settlement_data.toml"],
+		None,
+	)?;
+
+	let generator = SettlementGenerator::new(corpus);
+	println!("settlement: {}", generator.generate());
+
+	Ok(())
+}
+```
+
+full runnable example:
+- [examples/custom_target_from_file.rs](examples/custom_target_from_file.rs)
+
 ## data format
 
 all input toml files must include a `header` section:
@@ -116,7 +191,7 @@ when it is removed, tests and examples will be updated to use the replacement te
 ## architecture overview
 
 1. loaders parse and validate target (`src/loader/**`)
-2. merge builds target corpora and keeps source-level metadata (`src/merge/mod.rs`)
+2. merge builds target corpora and keeps source-level metadata (`src/merger/mod.rs`)
 3. generators build output values from corpus candidate pools (`src/generators/**`)
 
 key model types:
@@ -137,6 +212,7 @@ cargo run --example weapongen_provenance_from_file
 cargo run --example weapongen_provenance_from_documents
 cargo run --example weapongen_provenance_new_corpus
 cargo run --example persongen_from_file
+cargo run --example custom_target_from_file
 ```
 
 ## adding a new target

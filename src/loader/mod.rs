@@ -8,17 +8,13 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "lowercase")]
-/// supported target categories for loader dispatch.
-pub enum Target {
-    /// weapon dataset target.
-    Weapon,
-    /// person dataset target.
-    Person,
-    /// unsupported target, used in error handling.
-    Unsupported
-}
+/// open target identifier used by loaders, mergers, and generators.
+pub type Target = String;
+
+/// built-in target id for weapon schemas.
+pub const TARGET_WEAPON: &str = "weapon";
+/// built-in target id for person schemas.
+pub const TARGET_PERSON: &str = "person";
 
 #[derive(Deserialize, Debug, Clone)]
 /// common metadata required in each input file header.
@@ -85,7 +81,7 @@ impl fmt::Display for LoaderError {
                 }
             }
             LoaderError::TargetMismatch { expected, found } => {
-                write!(f, "target mismatch: expected {expected:?}, got {found:?}")
+                write!(f, "target mismatch: expected '{expected}', got '{found}'")
             }
         }
     }
@@ -133,7 +129,7 @@ impl LoaderError {
 
 pub trait TargetedLoader: Sized + DeserializeOwned {
     /// expected target for this loader implementation.
-    const TARGET: Target;
+    const TARGET: &'static str;
 
     /// load, parse, and target-validate a single toml file.
     fn from_file(path: impl AsRef<Path>) -> Result<AethelDoc<Self>, LoaderError> {
@@ -145,8 +141,8 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
 
         if parsed.header.target != Self::TARGET {
             return Err(LoaderError::TargetMismatch {
-                expected: Self::TARGET,
-                found: parsed.header.target,
+                expected: Self::TARGET.to_string(),
+                found: parsed.header.target.clone(),
             });
         }
 
@@ -175,7 +171,7 @@ mod tests {
 
         let file: AethelDoc<toml::Table> = toml::from_str(&content).unwrap();
 
-        assert_eq!(file.header.target, Target::Weapon);
+        assert_eq!(file.header.target, TARGET_WEAPON);
         assert_eq!(file.header.name, "weapon test set");
         assert!(file.header.desc.is_some());
         assert!(file.header.author.is_some());

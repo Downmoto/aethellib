@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 
-use crate::loader::{Target, TargetedLoader};
+use crate::loader::{TARGET_WEAPON, TargetedLoader};
 
 #[derive(Deserialize, Debug, Clone)]
 /// weapon body sections loaded from a weapon-target toml document.
@@ -77,7 +77,7 @@ pub struct WeaponVisualSection {
 }
 
 impl TargetedLoader for WeaponLoader {
-    const TARGET: Target = Target::Weapon;
+    const TARGET: &'static str = TARGET_WEAPON;
 }
 
 #[cfg(test)]
@@ -90,7 +90,7 @@ mod tests {
     fn test_weapon_loader_deserializes_data_sections() {
         let loaded = WeaponLoader::from_file("data/weapon_test_data.toml").unwrap();
 
-        assert_eq!(loaded.header.target, Target::Weapon);
+        assert_eq!(loaded.header.target, TARGET_WEAPON);
         assert!(!loaded.data.name.unwrap().prefix.unwrap().is_empty());
         assert!(!loaded.data.weapon_type.unwrap().types.unwrap().is_empty());
         assert!(!loaded.data.lore.unwrap().templates.unwrap().is_empty());
@@ -155,7 +155,7 @@ prefix = ["iron"]
             _ => panic!("expected weapon corpus"),
         };
 
-        assert_eq!(loaded.target, Target::Weapon);
+        assert_eq!(loaded.target, TARGET_WEAPON);
         assert_eq!(loaded.documents.len(), 4);
         assert_eq!(loaded.documents[0].header.name, "weapon merge fixture part 1");
         assert_eq!(loaded.documents[1].header.name, "weapon merge fixture part 2");
@@ -165,6 +165,6 @@ prefix = ["iron"]
         assert!(loaded
             .documents
             .iter()
-            .all(|document| document.header.target == Target::Weapon));
+            .all(|document| document.header.target == TARGET_WEAPON));
     }
 }

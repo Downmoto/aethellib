@@ -328,7 +328,7 @@ mod tests {
     use rand::SeedableRng;
     use rand::rngs::StdRng;
     use crate::loader::AthelDocHeader;
-    use crate::loader::Target;
+    use crate::loader::TARGET_WEAPON;
     use crate::loader::loader_weapon::{
         WeaponLoreSection, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
         WeaponVisualSection,
@@ -557,7 +557,7 @@ mod tests {
             source_path: format!("{source_id}.toml"),
             header: AthelDocHeader {
                 name: name.to_string(),
-                target: Target::Weapon,
+                target: TARGET_WEAPON.to_string(),
                 desc: None,
                 author: None,
                 version: None,

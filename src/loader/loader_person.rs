@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 
-use crate::loader::{Target, TargetedLoader};
+use crate::loader::{TARGET_PERSON, TargetedLoader};
 
 #[derive(Deserialize, Debug, Clone)]
 /// person body sections loaded from a person-target toml document.
@@ -23,7 +23,7 @@ pub struct PersonNameSection {
 }
 
 impl TargetedLoader for PersonLoader {
-    const TARGET: Target = Target::Person;
+    const TARGET: &'static str = TARGET_PERSON;
 }
 
 #[cfg(test)]
@@ -35,7 +35,7 @@ mod tests {
     fn test_person_loader_deserializes_data_sections() {
         let loaded = PersonLoader::from_file("data/person_test_data.toml").unwrap();
 
-        assert_eq!(loaded.header.target, Target::Person);
+        assert_eq!(loaded.header.target, TARGET_PERSON);
         assert!(!loaded.data.name.unwrap().first.unwrap().is_empty());
     }
 

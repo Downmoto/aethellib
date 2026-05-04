@@ -49,7 +49,7 @@ required change:
 - add pub mod loader_target_name;
 
 note:
-- if Target enum does not yet include the target, add a new variant.
+- define `const TARGET: &'static str` in your loader to match the header target string.
 
 ## 3. wire target into merge orchestration
 

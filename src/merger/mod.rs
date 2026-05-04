@@ -9,7 +9,7 @@ use std::fs;
 
 use crate::loader::loader_person::PersonLoader;
 use crate::loader::loader_weapon::WeaponLoader;
-use crate::loader::{AethelDoc, AthelDocHeader, LoaderError, Target, TargetedLoader};
+use crate::loader::{AethelDoc, AthelDocHeader, LoaderError, TARGET_PERSON, TARGET_WEAPON, Target, TargetedLoader};
 use crate::merger::merger_options::MergerOptionError;
 use merger_options::MergeOptions;
 
@@ -103,10 +103,10 @@ pub enum MergedAethelDoc {
 
 impl MergedAethelDoc {
     /// returns the target represented by this merged document variant.
-    pub fn target(&self) -> Target {
+    pub fn target(&self) -> &'static str {
         match self {
-            MergedAethelDoc::Person(_) => Target::Person,
-            MergedAethelDoc::Weapon(_) => Target::Weapon,
+            MergedAethelDoc::Person(_) => TARGET_PERSON,
+            MergedAethelDoc::Weapon(_) => TARGET_WEAPON,
         }
     }
 
@@ -159,6 +159,17 @@ pub fn merge_person_files(
     build_corpus_from_paths::<PersonLoader>(paths, opts)
 }
 
+/// assembles a corpus for any loader that implements `TargetedLoader`.
+pub fn merge_target_files<T>(
+    paths: &[&str],
+    opts: Option<MergeOptions>,
+) -> Result<AethelCorpus<T>, MergerError>
+where
+    T: TargetedLoader,
+{
+    build_corpus_from_paths::<T>(paths, opts)
+}
+
 /// merges a mixed list of toml files into one merged document per discovered target.
 ///
 /// files are first grouped by `header.target` while preserving first-seen target order,
@@ -178,31 +189,31 @@ pub fn merge_from_files(
     let parsed_inputs = parse_merge_inputs(paths)?;
     let mut person_sources: Vec<MergeSourceInput<'_>> = Vec::new();
     let mut weapon_sources: Vec<MergeSourceInput<'_>> = Vec::new();
-    let mut target_order: Vec<Target> = Vec::with_capacity(2);
+    let mut target_order: Vec<&'static str> = Vec::with_capacity(2);
     let mut seen_person = false;
     let mut seen_weapon = false;
 
     for input in &parsed_inputs {
-        match input.target {
-            Target::Person => person_sources.push(MergeSourceInput {
+        match input.target.as_str() {
+            TARGET_PERSON => person_sources.push(MergeSourceInput {
                 path: &input.path,
                 raw: &input.raw,
             }),
-            Target::Weapon => weapon_sources.push(MergeSourceInput {
+            TARGET_WEAPON => weapon_sources.push(MergeSourceInput {
                 path: &input.path,
                 raw: &input.raw,
             }),
-            Target::Unsupported => return Err(MergerError::UnsupportedTarget(Target::Unsupported)),
+            _ => return Err(MergerError::UnsupportedTarget(input.target.clone())),
         }
 
-        match input.target {
-            Target::Person if !seen_person => {
+        match input.target.as_str() {
+            TARGET_PERSON if !seen_person => {
                 seen_person = true;
-                target_order.push(Target::Person);
+                target_order.push(TARGET_PERSON);
             }
-            Target::Weapon if !seen_weapon => {
+            TARGET_WEAPON if !seen_weapon => {
                 seen_weapon = true;
-                target_order.push(Target::Weapon);
+                target_order.push(TARGET_WEAPON);
             }
             _ => {}
         }
@@ -211,18 +222,18 @@ pub fn merge_from_files(
     let mut merged_docs: Vec<MergedAethelDoc> = Vec::with_capacity(target_order.len());
     for target in target_order {
         match target {
-            Target::Person => {
+            TARGET_PERSON => {
                 let merged =
                     build_corpus_from_sources::<PersonLoader>(&person_sources, Some(options))?;
                 merged_docs.push(MergedAethelDoc::Person(merged));
             }
-            Target::Weapon => {
+            TARGET_WEAPON => {
                 let merged =
                     build_corpus_from_sources::<WeaponLoader>(&weapon_sources, Some(options))?;
                 merged_docs.push(MergedAethelDoc::Weapon(merged));
             }
-            Target::Unsupported => {
-                return Err(MergerError::UnsupportedTarget(Target::Unsupported));
+            _ => {
+                return Err(MergerError::UnsupportedTarget(target.to_string()));
             }
         }
     }
@@ -309,8 +320,8 @@ where
 
         if parsed.header.target != T::TARGET {
             return Err(LoaderError::TargetMismatch {
-                expected: T::TARGET,
-                found: parsed.header.target,
+                expected: T::TARGET.to_string(),
+                found: parsed.header.target.clone(),
             }
             .into());
         }
@@ -323,7 +334,7 @@ where
             .into());
         }
 
-        let source_hash = hash_source_content(parsed.header.target, source.raw);
+        let source_hash = hash_source_content(parsed.header.target.as_str(), source.raw);
         let source_id = make_unique_source_id(&source_hash, &mut seen_source_ids);
 
         documents.push(SourceAethelDoc {
@@ -336,7 +347,7 @@ where
     }
 
     Ok(AethelCorpus {
-        target: T::TARGET,
+        target: T::TARGET.to_string(),
         documents,
     })
 }
@@ -354,9 +365,9 @@ fn make_unique_source_id(base_hash: &str, seen: &mut HashMap<String, usize>) -> 
 }
 
 /// hashes canonicalized source content with target context for stable identity.
-fn hash_source_content(target: Target, raw: &str) -> String {
+fn hash_source_content(target: &str, raw: &str) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(format!("{target:?}\n"));
+    hasher.update(format!("{target}\n"));
     hasher.update(canonicalize_raw(raw));
     format!("{:x}", hasher.finalize())
 }
@@ -395,7 +406,7 @@ mod tests {
         let merged = merge_from_files(&paths, None).unwrap();
 
         assert_eq!(merged.len(), 1);
-        assert_eq!(merged[0].target(), Target::Weapon);
+        assert_eq!(merged[0].target(), TARGET_WEAPON);
 
         match &merged[0] {
             MergedAethelDoc::Weapon(doc) => {
@@ -403,7 +414,7 @@ mod tests {
                 assert!(
                     doc.documents
                         .iter()
-                        .all(|source| source.header.target == Target::Weapon)
+                        .all(|source| source.header.target == TARGET_WEAPON)
                 );
             }
             _ => panic!("expected weapon corpus"),
@@ -417,8 +428,8 @@ mod tests {
         let merged = merge_from_files(&paths, None).unwrap();
 
         assert_eq!(merged.len(), 2);
-        assert_eq!(merged[0].target(), Target::Person);
-        assert_eq!(merged[1].target(), Target::Weapon);
+        assert_eq!(merged[0].target(), TARGET_PERSON);
+        assert_eq!(merged[1].target(), TARGET_WEAPON);
 
         let person = merged[0].as_person().unwrap();
         let weapon = merged[1].as_weapon().unwrap();
@@ -520,9 +531,10 @@ prefix = ["Iron"]
         assert!(matches!(
             result,
             Err(MergerError::Loader(LoaderError::TargetMismatch {
-                expected: Target::Weapon,
-                found: Target::Person,
+                expected,
+                found,
             }))
+            if expected == TARGET_WEAPON && found == TARGET_PERSON
         ));
     }
 
@@ -542,7 +554,7 @@ target = "unsupported"
 
         assert!(matches!(
             result,
-            Err(MergerError::UnsupportedTarget(Target::Unsupported))
+            Err(MergerError::UnsupportedTarget(target)) if target == "unsupported"
         ));
 
         std::fs::remove_file(temp_path).unwrap();
@@ -603,11 +615,11 @@ target = "unsupported"
         let merged_docs = merge_from_files(&paths, None).unwrap();
         let weapon_ref = merged_docs[0].as_weapon();
         assert!(weapon_ref.is_some());
-        assert_eq!(weapon_ref.unwrap().target, Target::Weapon);
+        assert_eq!(weapon_ref.unwrap().target, TARGET_WEAPON);
 
         let owned = merged_docs.into_iter().next().unwrap().into_weapon();
         assert!(owned.is_some());
-        assert_eq!(owned.unwrap().target, Target::Weapon);
+        assert_eq!(owned.unwrap().target, TARGET_WEAPON);
     }
 
     #[test]
@@ -617,11 +629,11 @@ target = "unsupported"
         let merged_docs = merge_from_files(&paths, None).unwrap();
         let person_ref = merged_docs[0].as_person();
         assert!(person_ref.is_some());
-        assert_eq!(person_ref.unwrap().target, Target::Person);
+        assert_eq!(person_ref.unwrap().target, TARGET_PERSON);
 
         let owned = merged_docs.into_iter().next().unwrap().into_person();
         assert!(owned.is_some());
-        assert_eq!(owned.unwrap().target, Target::Person);
+        assert_eq!(owned.unwrap().target, TARGET_PERSON);
     }
 
     #[test]

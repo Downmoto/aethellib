@@ -30,7 +30,7 @@ pub trait Generator: Sized {
 	/// creates a generator directly from source documents.
 	fn from_documents(documents: Vec<SourceAethelDoc<Self::Loader>>) -> Self {
 		Self::new(AethelCorpus {
-			target: <Self::Loader as TargetedLoader>::TARGET,
+			target: <Self::Loader as TargetedLoader>::TARGET.to_string(),
 			documents,
 		})
 	}
