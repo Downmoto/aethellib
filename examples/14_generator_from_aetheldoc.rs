@@ -1,25 +1,25 @@
 //! builds a generator from one parsed aethel document.
 //! this demonstrates generator::from_aethel_doc.
 
+#[path = "common/mod.rs"]
+mod support;
+
+use support::{TempTomlFile, weapon_document};
+use aethellib::loader::{TargetedLoader, loader_weapon::WeaponLoader};
 use aethellib::generator::{Generator, generator_weapon::WeaponGenerator};
-use aethellib::loader::{AethelDoc, loader_weapon::WeaponLoader};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let parsed: AethelDoc<WeaponLoader> = toml::from_str(
+    let fixture = TempTomlFile::new(&weapon_document(
+        "loader demo",
         r#"
-[header]
-name = "parsed weapon set"
-target = "weapon"
-
 [name]
 prefix = ["iron"]
-suffix = ["of dawn"]
-primitives = ["ka", "lor"]
 "#,
-    )?;
+    ));
 
-    let generator = WeaponGenerator::from_aethel_doc(parsed)?;
+    let loaded = WeaponLoader::from_file(fixture.path_str())?;
+    let generator = WeaponGenerator::from_aethel_doc(loaded)?;
     let generated = generator.generate();
 
     println!("generated from aetheldoc: {}", generated.name.value);
