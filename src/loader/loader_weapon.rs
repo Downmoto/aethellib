@@ -84,7 +84,7 @@ impl TargetedLoader for WeaponLoader {
 mod tests {
     use super::*;
     use crate::loader::AethelDoc;
-    use crate::merger::{merge_from_files, MergedAethelDoc};
+    use crate::merger::merge_from_files;
 
     #[test]
     fn test_weapon_loader_deserializes_data_sections() {
@@ -150,10 +150,7 @@ prefix = ["iron"]
 
         let merged_docs = merge_from_files(&paths, None).unwrap();
         assert_eq!(merged_docs.len(), 1);
-        let loaded = match &merged_docs[0] {
-            MergedAethelDoc::Weapon(doc) => doc,
-            _ => panic!("expected weapon corpus"),
-        };
+        let loaded = merged_docs[0].to_corpus::<WeaponLoader>().unwrap();
 
         assert_eq!(loaded.target, TARGET_WEAPON);
         assert_eq!(loaded.documents.len(), 4);

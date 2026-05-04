@@ -5,7 +5,7 @@ use std::error::Error;
 use aethellib::generators::Generator;
 use aethellib::generators::generator_weapon::WeaponGenerator;
 use aethellib::loader::loader_weapon::WeaponLoader;
-use aethellib::merger::{AethelCorpus, MergedAethelDoc, merge_from_files, merge_weapon_files};
+use aethellib::merger::{AethelCorpus, merge_from_files, merge_target_files};
 
 fn build_weapon_corpus() -> Result<AethelCorpus<WeaponLoader>, Box<dyn Error>> {
     let paths = [
@@ -15,7 +15,7 @@ fn build_weapon_corpus() -> Result<AethelCorpus<WeaponLoader>, Box<dyn Error>> {
         "data/weapon_merge_part_4.toml",
     ];
 
-    let corpus = merge_weapon_files(&paths, None)?;
+    let corpus = merge_target_files::<WeaponLoader>(&paths, None)?;
     Ok(corpus)
 }
 
@@ -32,10 +32,8 @@ fn build_weapon_corpus_via_merge_from_files() -> Result<AethelCorpus<WeaponLoade
         return Err("expected at least one merged document".into());
     };
 
-    match first {
-        MergedAethelDoc::Person(_) => Err("expected weapon corpus".into()),
-        MergedAethelDoc::Weapon(corpus) => Ok(corpus),
-    }
+    let corpus = first.into_corpus::<WeaponLoader>()?;
+    Ok(corpus)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {

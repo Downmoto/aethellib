@@ -41,10 +41,12 @@ println!("weapon: {}", generated.name.value);
 ### merge mixed targets from multiple files
 
 ```rust
-use aethellib::merge::{MergedAethelDoc, merge_from_files};
+use aethellib::merger::merge_from_files;
 use aethellib::generators::Generator;
 use aethellib::generators::generator_weapon::WeaponGenerator;
 use aethellib::generators::generator_person::PersonGenerator;
+use aethellib::loader::loader_person::PersonLoader;
+use aethellib::loader::loader_weapon::WeaponLoader;
 
 let merged = merge_from_files(&[
 	"data/person_test_data.toml",
@@ -52,18 +54,23 @@ let merged = merge_from_files(&[
 ], None)?;
 
 for doc in merged {
-	match doc {
-		MergedAethelDoc::Person(corpus) => {
+	match doc.target() {
+		"person" => {
+			let corpus = doc.into_corpus::<PersonLoader>()?;
 			println!("person corpus docs: {}", corpus.documents.len());
 			let generator = PersonGenerator::new(corpus);
 			let generated = generator.generate();
 			// ...
 		}
-		MergedAethelDoc::Weapon(corpus) => {
+		"weapon" => {
+			let corpus = doc.into_corpus::<WeaponLoader>()?;
 			println!("weapon corpus docs: {}", corpus.documents.len());
 			let generator = WeaponGenerator::new(corpus);
 			let generated = generator.generate();
 			// ...
+		}
+		_ => {
+			// handle custom targets here
 		}
 	}
 }
@@ -197,7 +204,7 @@ when it is removed, tests and examples will be updated to use the replacement te
 key model types:
 - `AethelCorpus<T>`: per-target corpus with ordered source documents
 - `SourceAethelDoc<T>`: one source document with metadata + body
-- `MergedAethelDoc`: mixed-target merge result enum
+- `MergedAethelDoc`: mixed-target merge result carrying target id + untyped tables
 - `GeneratedField<T>`: generated value + provenance refs
 
 ## examples

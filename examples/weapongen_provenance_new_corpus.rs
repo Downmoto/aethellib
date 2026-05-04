@@ -7,7 +7,7 @@ use aethellib::generators::SourceRef;
 use aethellib::generators::generator_weapon::{GeneratedWeapon, WeaponGenerator};
 use aethellib::loader::loader_weapon::WeaponLoader;
 use aethellib::merger::AethelCorpus;
-use aethellib::merger::merge_weapon_files;
+use aethellib::merger::merge_target_files;
 
 fn print_refs(refs: &[SourceRef]) {
     for source in refs {
@@ -48,7 +48,7 @@ fn build_weapon_corpus() -> Result<AethelCorpus<WeaponLoader>, Box<dyn Error>> {
         "data/weapon_merge_part_4.toml",
     ];
 
-    let corpus = merge_weapon_files(&paths, None)?;
+    let corpus = merge_target_files::<WeaponLoader>(&paths, None)?;
     Ok(corpus)
 }
 
