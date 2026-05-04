@@ -3,16 +3,13 @@
 use std::fmt;
 
 use rand::seq::SliceRandom;
-use rand::thread_rng;
 use rand::Rng;
 
 use crate::generators::{
-    GeneratedField, SourceRef, ValueCandidate, build_pool, extend_unique_source_refs,
+    GeneratedField, Generator, SourceRef, ValueCandidate, build_pool, extend_unique_source_refs,
 };
 use crate::loader::loader_weapon::WeaponLoader;
-use crate::loader::Target;
-use crate::merge::merge_weapon::merge_weapon_files;
-use crate::merge::{AethelCorpus, MergeError, SourceAethelDoc};
+use crate::merge::{AethelCorpus, SourceAethelDoc};
 
 type StringCandidate = ValueCandidate<String>;
 
@@ -77,35 +74,18 @@ pub struct WeaponGenerator {
     index: WeaponCandidateIndex,
 }
 
-impl WeaponGenerator {
+impl Generator for WeaponGenerator {
+    type Loader = WeaponLoader;
+    type Output = GeneratedWeapon;
+
     /// creates a generator from a merged weapon corpus.
-    pub fn new(corpus: AethelCorpus<WeaponLoader>) -> Self {
+    fn new(corpus: AethelCorpus<WeaponLoader>) -> Self {
         let index = WeaponCandidateIndex::from_documents(&corpus.documents);
         Self { index }
     }
 
-    /// creates a generator directly from source documents.
-    pub fn from_documents(documents: Vec<SourceAethelDoc<WeaponLoader>>) -> Self {
-        Self::new(AethelCorpus {
-            target: Target::Weapon,
-            documents,
-        })
-    }
-
-    /// loads one weapon file and creates a corpus-backed generator.
-    pub fn from_file(path: &str) -> Result<Self, MergeError> {
-        let corpus = merge_weapon_files(&[path])?;
-        Ok(Self::new(corpus))
-    }
-
-    /// builds a single generated weapon by sampling indexed candidates.
-    pub fn generate(&self) -> GeneratedWeapon {
-        let mut rng = thread_rng();
-        self.generate_with_rng(&mut rng)
-    }
-
     /// builds a single generated weapon using an injected rng.
-    pub fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> GeneratedWeapon {
+    fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> GeneratedWeapon {
         let weapon_type = choose_candidate(&self.index.weapon_types, rng)
             .map(|candidate| candidate.into_generated_field());
 
@@ -360,6 +340,7 @@ mod tests {
     use rand::SeedableRng;
     use rand::rngs::StdRng;
     use crate::loader::AthelDocHeader;
+    use crate::loader::Target;
     use crate::loader::loader_weapon::{
         WeaponLoreSection, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
         WeaponVisualSection,
@@ -372,7 +353,6 @@ mod tests {
 
         assert!(!generated.name.value.is_empty());
 
-        println!("{generated}");
     }
 
     #[test]

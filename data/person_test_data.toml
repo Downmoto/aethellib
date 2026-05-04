@@ -1,0 +1,11 @@
+[header]
+name = "person test set"
+target = "person"
+desc = "minimal person name primitives"
+author = "aethellib"
+version = "0.1"
+
+[name]
+first = ["al", "ra", "jo", "el"]
+middle = ["an", "is", "or"]
+last = ["ton", "ric", "den", "vale"]

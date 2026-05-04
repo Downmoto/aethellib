@@ -7,7 +7,45 @@
 
 use std::collections::HashMap;
 
-use crate::merge::SourceAethelDoc;
+use rand::Rng;
+use rand::thread_rng;
+
+use crate::loader::TargetedLoader;
+use crate::merge::{AethelCorpus, MergeError, SourceAethelDoc, build_corpus_from_paths};
+
+/// generic generator contract with shared constructor and generation helpers.
+pub trait Generator: Sized {
+	/// loader payload type used by this generator target.
+	type Loader: TargetedLoader;
+	/// generated output type.
+	type Output;
+
+	/// creates a generator from a merged target corpus.
+	fn new(corpus: AethelCorpus<Self::Loader>) -> Self;
+
+	/// builds one output value using the supplied rng.
+	fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::Output;
+
+	/// creates a generator directly from source documents.
+	fn from_documents(documents: Vec<SourceAethelDoc<Self::Loader>>) -> Self {
+		Self::new(AethelCorpus {
+			target: <Self::Loader as TargetedLoader>::TARGET,
+			documents,
+		})
+	}
+
+	/// loads one target file and creates a corpus-backed generator.
+	fn from_file(path: &str) -> Result<Self, MergeError> {
+		let corpus = build_corpus_from_paths::<Self::Loader>(&[path])?;
+		Ok(Self::new(corpus))
+	}
+
+	/// builds one output by sampling with thread-local randomness.
+	fn generate(&self) -> Self::Output {
+		let mut rng = thread_rng();
+		self.generate_with_rng(&mut rng)
+	}
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// provenance reference for one source field.
@@ -130,4 +168,5 @@ pub(crate) fn extend_unique_source_refs(into: &mut Vec<SourceRef>, refs: &[Sourc
 	}
 }
 
+pub mod generator_person;
 pub mod generator_weapon;

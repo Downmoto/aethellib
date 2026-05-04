@@ -1,5 +1,6 @@
 //! loader primitives for parsing and validating aethel source documents.
 
+pub mod loader_person;
 pub mod loader_weapon;
 
 use serde::{Deserialize, de::DeserializeOwned};

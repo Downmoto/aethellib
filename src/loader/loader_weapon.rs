@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 
-use crate::loader::{AethelDoc, LoaderError, Target, TargetedLoader};
+use crate::loader::{Target, TargetedLoader};
 
 #[derive(Deserialize, Debug, Clone)]
 /// weapon body sections loaded from a weapon-target toml document.
@@ -80,16 +80,10 @@ impl TargetedLoader for WeaponLoader {
     const TARGET: Target = Target::Weapon;
 }
 
-impl WeaponLoader {
-    /// load a weapon toml file and validate its target header.
-    pub fn from_file(path: &str) -> Result<AethelDoc<Self>, LoaderError> {
-        <Self as TargetedLoader>::from_file(path)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::loader::AethelDoc;
     use crate::merge::{merge_from_files, MergedAethelDoc};
 
     #[test]
@@ -156,7 +150,10 @@ prefix = ["iron"]
 
         let merged_docs = merge_from_files(&paths).unwrap();
         assert_eq!(merged_docs.len(), 1);
-        let MergedAethelDoc::Weapon(loaded) = &merged_docs[0];
+        let loaded = match &merged_docs[0] {
+            MergedAethelDoc::Weapon(doc) => doc,
+            _ => panic!("expected weapon corpus"),
+        };
 
         assert_eq!(loaded.target, Target::Weapon);
         assert_eq!(loaded.documents.len(), 4);

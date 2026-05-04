@@ -1,12 +1,11 @@
 //! central target-based merge orchestration for aethel documents.
 
-pub mod merge_weapon;
-
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 
+use crate::loader::loader_person::PersonLoader;
 use crate::loader::loader_weapon::WeaponLoader;
 use crate::loader::{AethelDoc, AthelDocHeader, LoaderError, Target, TargetedLoader};
 
@@ -83,6 +82,8 @@ pub struct AethelCorpus<T> {
 #[derive(Debug)]
 /// merged document variants keyed by target type.
 pub enum MergedAethelDoc {
+    /// corpus output for person-target files.
+    Person(AethelCorpus<PersonLoader>),
     /// corpus output for weapon-target files.
     Weapon(AethelCorpus<WeaponLoader>),
 }
@@ -91,13 +92,31 @@ impl MergedAethelDoc {
     /// returns the target represented by this merged document variant.
     pub fn target(&self) -> Target {
         match self {
+            MergedAethelDoc::Person(_) => Target::Person,
             MergedAethelDoc::Weapon(_) => Target::Weapon,
+        }
+    }
+
+    /// returns a shared reference to a person corpus when this variant is person.
+    pub fn as_person(&self) -> Option<&AethelCorpus<PersonLoader>> {
+        match self {
+            MergedAethelDoc::Person(corpus) => Some(corpus),
+            MergedAethelDoc::Weapon(_) => None,
+        }
+    }
+
+    /// consumes this value and returns a person corpus when this variant is person.
+    pub fn into_person(self) -> Option<AethelCorpus<PersonLoader>> {
+        match self {
+            MergedAethelDoc::Person(corpus) => Some(corpus),
+            MergedAethelDoc::Weapon(_) => None,
         }
     }
 
     /// returns a shared reference to a weapon corpus when this variant is weapon.
     pub fn as_weapon(&self) -> Option<&AethelCorpus<WeaponLoader>> {
         match self {
+            MergedAethelDoc::Person(_) => None,
             MergedAethelDoc::Weapon(corpus) => Some(corpus),
         }
     }
@@ -105,9 +124,20 @@ impl MergedAethelDoc {
     /// consumes this value and returns a weapon corpus when this variant is weapon.
     pub fn into_weapon(self) -> Option<AethelCorpus<WeaponLoader>> {
         match self {
+            MergedAethelDoc::Person(_) => None,
             MergedAethelDoc::Weapon(corpus) => Some(corpus),
         }
     }
+}
+
+/// assembles a weapon corpus while preserving file-specific metadata.
+pub fn merge_weapon_files(paths: &[&str]) -> Result<AethelCorpus<WeaponLoader>, MergeError> {
+    build_corpus_from_paths::<WeaponLoader>(paths)
+}
+
+/// assembles a person corpus while preserving file-specific metadata.
+pub fn merge_person_files(paths: &[&str]) -> Result<AethelCorpus<PersonLoader>, MergeError> {
+    build_corpus_from_paths::<PersonLoader>(paths)
 }
 
 /// merges a mixed list of toml files into one merged document per discovered target.
@@ -122,23 +152,53 @@ pub fn merge_from_files(paths: &[&str]) -> Result<Vec<MergedAethelDoc>, MergeErr
     }
 
     let parsed_inputs = parse_merge_inputs(paths)?;
+    let mut person_sources: Vec<MergeSourceInput<'_>> = Vec::new();
     let mut weapon_sources: Vec<MergeSourceInput<'_>> = Vec::new();
+    let mut target_order: Vec<Target> = Vec::with_capacity(2);
+    let mut seen_person = false;
+    let mut seen_weapon = false;
 
     for input in &parsed_inputs {
         match input.target {
+            Target::Person => person_sources.push(MergeSourceInput {
+                path: &input.path,
+                raw: &input.raw,
+            }),
             Target::Weapon => weapon_sources.push(MergeSourceInput {
                 path: &input.path,
                 raw: &input.raw,
             }),
-            Target::Person => return Err(MergeError::UnsupportedTarget(Target::Person)),
             Target::Unsupported => return Err(MergeError::UnsupportedTarget(Target::Unsupported)),
+        }
+
+        match input.target {
+            Target::Person if !seen_person => {
+                seen_person = true;
+                target_order.push(Target::Person);
+            }
+            Target::Weapon if !seen_weapon => {
+                seen_weapon = true;
+                target_order.push(Target::Weapon);
+            }
+            _ => {}
         }
     }
 
-    let mut merged_docs: Vec<MergedAethelDoc> = Vec::with_capacity(1);
-    if !weapon_sources.is_empty() {
-        let merged = merge_weapon::merge_weapon_sources(&weapon_sources)?;
-        merged_docs.push(MergedAethelDoc::Weapon(merged));
+    let mut merged_docs: Vec<MergedAethelDoc> = Vec::with_capacity(target_order.len());
+    for target in target_order {
+        match target {
+            Target::Person => {
+                let merged = build_corpus_from_sources::<PersonLoader>(&person_sources)?;
+                merged_docs.push(MergedAethelDoc::Person(merged));
+            }
+            Target::Weapon => {
+                let merged = build_corpus_from_sources::<WeaponLoader>(&weapon_sources)?;
+                merged_docs.push(MergedAethelDoc::Weapon(merged));
+            }
+            Target::Unsupported => {
+                return Err(MergeError::UnsupportedTarget(Target::Unsupported));
+            }
+        }
     }
 
     Ok(merged_docs)
@@ -301,7 +361,25 @@ mod tests {
                     .iter()
                     .all(|source| source.header.target == Target::Weapon));
             }
+            _ => panic!("expected weapon corpus"),
         }
+    }
+
+    #[test]
+    fn test_merge_groups_mixed_targets_in_first_seen_order() {
+        let paths = ["data/person_test_data.toml", "data/weapon_test_data.toml"];
+
+        let merged = merge_from_files(&paths).unwrap();
+
+        assert_eq!(merged.len(), 2);
+        assert_eq!(merged[0].target(), Target::Person);
+        assert_eq!(merged[1].target(), Target::Weapon);
+
+        let person = merged[0].as_person().unwrap();
+        let weapon = merged[1].as_weapon().unwrap();
+
+        assert_eq!(person.documents.len(), 1);
+        assert_eq!(weapon.documents.len(), 1);
     }
 
     #[test]
@@ -347,6 +425,7 @@ suffix = ["of Dawn"]
                 assert_eq!(doc.documents[0].header.version.as_deref(), Some("1.0"));
                 assert_eq!(doc.documents[1].header.version.as_deref(), Some("1.1"));
             }
+            _ => panic!("expected weapon corpus"),
         }
 
         std::fs::remove_file(temp_a).unwrap();
@@ -380,6 +459,7 @@ prefix = ["Iron"]
                 assert_ne!(doc.documents[0].source_id, doc.documents[1].source_id);
                 assert_eq!(doc.documents[0].source_hash, doc.documents[1].source_hash);
             }
+            _ => panic!("expected weapon corpus"),
         }
 
         std::fs::remove_file(temp_a).unwrap();
@@ -466,5 +546,49 @@ target = "unsupported"
         let owned = merged_docs.into_iter().next().unwrap().into_weapon();
         assert!(owned.is_some());
         assert_eq!(owned.unwrap().target, Target::Weapon);
+    }
+
+    #[test]
+    fn test_merged_aethel_doc_accessors_return_person_variant() {
+        let paths = ["data/person_test_data.toml"];
+
+        let merged_docs = merge_from_files(&paths).unwrap();
+        let person_ref = merged_docs[0].as_person();
+        assert!(person_ref.is_some());
+        assert_eq!(person_ref.unwrap().target, Target::Person);
+
+        let owned = merged_docs.into_iter().next().unwrap().into_person();
+        assert!(owned.is_some());
+        assert_eq!(owned.unwrap().target, Target::Person);
+    }
+
+    #[test]
+    fn test_build_person_corpus_from_sources_matches_build_corpus_from_paths() {
+        let paths = ["data/person_test_data.toml"];
+
+        let from_paths = build_corpus_from_paths::<PersonLoader>(&paths).unwrap();
+
+        let loaded_sources: Vec<(String, String)> = paths
+            .iter()
+            .map(|path| ((*path).to_string(), std::fs::read_to_string(path).unwrap()))
+            .collect();
+
+        let source_inputs: Vec<MergeSourceInput<'_>> = loaded_sources
+            .iter()
+            .map(|(path, raw)| MergeSourceInput {
+                path: path.as_str(),
+                raw: raw.as_str(),
+            })
+            .collect();
+
+        let from_sources = build_corpus_from_sources::<PersonLoader>(&source_inputs).unwrap();
+
+        assert_eq!(from_paths.target, from_sources.target);
+        assert_eq!(from_paths.documents.len(), from_sources.documents.len());
+        assert_eq!(from_paths.documents[0].source_id, from_sources.documents[0].source_id);
+        assert_eq!(from_paths.documents[0].source_hash, from_sources.documents[0].source_hash);
+        assert_eq!(from_paths.documents[0].source_path, from_sources.documents[0].source_path);
+        assert_eq!(from_paths.documents[0].header.name, from_sources.documents[0].header.name);
+        assert_eq!(from_paths.documents[0].header.target, from_sources.documents[0].header.target);
     }
 }
