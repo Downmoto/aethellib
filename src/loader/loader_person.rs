@@ -30,10 +30,21 @@ impl TargetedLoader for PersonLoader {
 mod tests {
     use super::*;
     use crate::loader::AethelDoc;
+    use crate::test_support::{TempTomlFile, person_document};
 
     #[test]
     fn test_person_loader_deserializes_data_sections() {
-        let loaded = PersonLoader::from_file("data/person_test_data.toml").unwrap();
+        let source = person_document(
+            "person fixture",
+            r#"
+[name]
+first = ["al", "be"]
+middle = ["ri"]
+last = ["son"]
+"#,
+        );
+        let temp = TempTomlFile::new(&source);
+        let loaded = PersonLoader::from_file(temp.path_str()).unwrap();
 
         assert_eq!(loaded.header.target, TARGET_PERSON);
         assert!(!loaded.data.name.unwrap().first.unwrap().is_empty());

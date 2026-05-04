@@ -131,12 +131,47 @@ fn build_primitive_segment(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::loader::{AthelDocHeader, TARGET_PERSON};
     use rand::SeedableRng;
     use rand::rngs::StdRng;
 
+    fn test_source_doc(
+        source_id: &str,
+        name: &str,
+        first: &[&str],
+        middle: &[&str],
+        last: &[&str],
+    ) -> SourceAethelDoc<PersonLoader> {
+        SourceAethelDoc {
+            source_id: source_id.to_string(),
+            source_hash: format!("hash-{source_id}"),
+            source_path: format!("{source_id}.toml"),
+            header: AthelDocHeader {
+                name: name.to_string(),
+                target: TARGET_PERSON.to_string(),
+                desc: None,
+                author: None,
+                version: None,
+            },
+            data: PersonLoader {
+                name: Some(crate::loader::loader_person::PersonNameSection {
+                    first: Some(first.iter().map(|value| value.to_string()).collect()),
+                    middle: Some(middle.iter().map(|value| value.to_string()).collect()),
+                    last: Some(last.iter().map(|value| value.to_string()).collect()),
+                }),
+            },
+        }
+    }
+
     #[test]
-    fn test_generate_person_name_from_file() {
-        let generator = PersonGenerator::from_file("data/person_test_data.toml").unwrap();
+    fn test_generate_person_name_from_documents() {
+        let generator = PersonGenerator::from_documents(vec![test_source_doc(
+            "source-a",
+            "person set",
+            &["al", "be"],
+            &["ri"],
+            &["son", "ton"],
+        )]);
         let generated = generator.generate();
 
         assert!(!generated.name.value.is_empty());
@@ -145,7 +180,13 @@ mod tests {
 
     #[test]
     fn test_generate_with_rng_is_deterministic_for_same_seed() {
-        let generator = PersonGenerator::from_file("data/person_test_data.toml").unwrap();
+        let generator = PersonGenerator::from_documents(vec![test_source_doc(
+            "source-a",
+            "person set",
+            &["al", "be"],
+            &["ri"],
+            &["son", "ton"],
+        )]);
 
         let mut rng_a = StdRng::seed_from_u64(99);
         let mut rng_b = StdRng::seed_from_u64(99);
