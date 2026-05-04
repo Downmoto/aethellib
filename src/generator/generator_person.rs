@@ -2,7 +2,7 @@
 
 use rand::Rng;
 
-use crate::generators::{
+use crate::generator::{
     GeneratedField, Generator, SourceRef, 
     utils::{StringCandidate, build_pool, extend_unique_source_refs, choose_candidate}
 };

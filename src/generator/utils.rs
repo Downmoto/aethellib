@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use rand::{Rng, seq::SliceRandom};
 
-use crate::{generators::{GeneratedField, SourceRef}, merger::SourceAethelDoc};
+use crate::{generator::{GeneratedField, SourceRef}, merger::SourceAethelDoc};
 
 pub(crate) type StringCandidate = GeneratedField<String>;
 

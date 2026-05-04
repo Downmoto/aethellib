@@ -1,7 +1,7 @@
 //! aethellib provides loaders, merge helpers, and generators for aethel datasets.
 
 /// generation module entrypoint.
-pub mod generators;
+pub mod generator;
 /// loader module entrypoint.
 pub mod loader;
 /// merge module entrypoint.

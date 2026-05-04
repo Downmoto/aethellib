@@ -2,9 +2,9 @@
 
 use std::error::Error;
 
-use aethellib::generators::Generator;
-use aethellib::generators::SourceRef;
-use aethellib::generators::generator_weapon::{GeneratedWeapon, WeaponGenerator};
+use aethellib::generator::Generator;
+use aethellib::generator::SourceRef;
+use aethellib::generator::generator_weapon::{GeneratedWeapon, WeaponGenerator};
 use aethellib::loader::loader_weapon::WeaponLoader;
 use aethellib::merger::AethelCorpus;
 use aethellib::merger::merge_target_files;

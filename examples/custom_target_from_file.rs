@@ -2,7 +2,7 @@
 
 use std::error::Error;
 
-use aethellib::generators::Generator;
+use aethellib::generator::Generator;
 use aethellib::loader::TargetedLoader;
 use aethellib::merger::{AethelCorpus, merge_target_files};
 use serde::Deserialize;

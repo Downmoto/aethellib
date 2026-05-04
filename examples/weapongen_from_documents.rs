@@ -1,7 +1,7 @@
 //! purpose: show how to create a weapon generator from in-memory `SourceAethelDoc` values.
 
-use aethellib::generators::Generator;
-use aethellib::generators::generator_weapon::WeaponGenerator;
+use aethellib::generator::Generator;
+use aethellib::generator::generator_weapon::WeaponGenerator;
 use aethellib::loader::loader_weapon::{
     WeaponLoader, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
 };
