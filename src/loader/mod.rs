@@ -7,7 +7,7 @@ pub mod loader_weapon;
 pub mod error;
 
 
-use serde::{Deserialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::fs;
 use std::path::Path;
 
@@ -21,7 +21,7 @@ pub const TARGET_WEAPON: &str = "weapon";
 /// built-in target id for person schemas.
 pub const TARGET_PERSON: &str = "person";
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// common metadata required in each input file header.
 pub struct AthelDocHeader {
     /// dataset display name.
@@ -36,7 +36,7 @@ pub struct AthelDocHeader {
     pub version: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 /// parsed toml payload with header plus target-specific body data.
 pub struct AethelDoc<T> {
     /// parsed file header.

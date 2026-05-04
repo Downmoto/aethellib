@@ -26,147 +26,36 @@ aethellib = { git = "https://github.com/Downmoto/aethellib", branch = "master" }
 
 ## quick start
 
-### from a single weapon file
+the examples directory is the primary practical documentation for this crate.
+all examples are self-contained and create temporary toml inputs at runtime.
 
-```rust
-use aethellib::generators::Generator;
-use aethellib::generators::generator_weapon::WeaponGenerator;
+start with these:
 
-let generator = WeaponGenerator::from_file("data/weapon_test_data.toml")?;
-let generated = generator.generate();
+- [examples/01_weapon_from_file.rs](examples/01_weapon_from_file.rs)
+- [examples/02_person_from_file.rs](examples/02_person_from_file.rs)
+- [examples/03_weapon_deterministic_rng.rs](examples/03_weapon_deterministic_rng.rs)
+- [examples/10_merge_mixed_targets.rs](examples/10_merge_mixed_targets.rs)
+- [examples/13_custom_target.rs](examples/13_custom_target.rs)
 
-println!("weapon: {}", generated.name.value);
-```
+## api coverage map
 
-### merge mixed targets from multiple files
-
-```rust
-use aethellib::merger::merge_from_files;
-use aethellib::generators::Generator;
-use aethellib::generators::generator_weapon::WeaponGenerator;
-use aethellib::generators::generator_person::PersonGenerator;
-use aethellib::loader::loader_person::PersonLoader;
-use aethellib::loader::loader_weapon::WeaponLoader;
-
-let merged = merge_from_files(&[
-	"data/person_test_data.toml",
-	"data/weapon_test_data.toml",
-], None)?;
-
-for doc in merged {
-	match doc.target() {
-		"person" => {
-			let corpus = doc.into_corpus::<PersonLoader>()?;
-			println!("person corpus docs: {}", corpus.documents.len());
-			let generator = PersonGenerator::new(corpus);
-			let generated = generator.generate();
-			// ...
-		}
-		"weapon" => {
-			let corpus = doc.into_corpus::<WeaponLoader>()?;
-			println!("weapon corpus docs: {}", corpus.documents.len());
-			let generator = WeaponGenerator::new(corpus);
-			let generated = generator.generate();
-			// ...
-		}
-		_ => {
-			// handle custom targets here
-		}
-	}
-}
-```
-
-### deterministic generation
-
-```rust
-use rand::SeedableRng;
-use rand::rngs::StdRng;
-
-use aethellib::generators::Generator;
-use aethellib::generators::generator_person::PersonGenerator;
-
-let generator = PersonGenerator::from_file("data/person_test_data.toml")?;
-let mut rng = StdRng::seed_from_u64(42);
-let generated = generator.generate_with_rng(&mut rng);
-
-println!("person: {}", generated.name.value);
-# Ok::<(), Box<dyn std::error::Error>>(())
-```
-
-### custom target with your own loader and generator
-
-```rust
-use std::error::Error;
-
-use aethellib::generators::Generator;
-use aethellib::loader::TargetedLoader;
-use aethellib::merger::{AethelCorpus, merge_target_files};
-use serde::Deserialize;
-
-#[derive(Debug, Deserialize, Clone)]
-struct SettlementLoader {
-	settlement: Option<SettlementSection>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct SettlementSection {
-	names: Option<Vec<String>>,
-}
-
-impl TargetedLoader for SettlementLoader {
-	const TARGET: &'static str = "settlement";
-}
-
-struct SettlementGenerator {
-	names: Vec<String>,
-}
-
-impl Generator for SettlementGenerator {
-	type Loader = SettlementLoader;
-	type Output = String;
-
-	fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
-		let mut names = Vec::new();
-		for doc in corpus.documents {
-			if let Some(section) = doc.data.settlement {
-				if let Some(section_names) = section.names {
-					names.extend(section_names);
-				}
-			}
-		}
-
-		if names.is_empty() {
-			names.push("new haven".to_string());
-		}
-
-		Self { names }
-	}
-
-	fn generate_with_rng<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Self::Output {
-		use rand::seq::SliceRandom;
-
-		self.names
-			.choose(rng)
-			.cloned()
-			.unwrap_or_else(|| "new haven".to_string())
-	}
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-	let corpus = merge_target_files::<SettlementLoader>(
-		&["data/your_settlement_data.toml"],
-		None,
-	)?;
-
-	let generator = SettlementGenerator::new(corpus);
-	println!("settlement: {}", generator.generate());
-
-	Ok(())
-}
-```
-
-full runnable example:
-- [examples/custom_target_from_file.rs](examples/custom_target_from_file.rs)
+| api area | what to run |
+| --- | --- |
+| weapon generator from file (`WeaponGenerator::from_file`, `Generator::generate`) | [examples/01_weapon_from_file.rs](examples/01_weapon_from_file.rs) |
+| person generator from file (`PersonGenerator::from_file`, `Generator::generate`) | [examples/02_person_from_file.rs](examples/02_person_from_file.rs) |
+| deterministic generation (`Generator::generate_with_rng`) | [examples/03_weapon_deterministic_rng.rs](examples/03_weapon_deterministic_rng.rs) |
+| generator from source documents (`Generator::from_documents`, `SourceAethelDoc<T>`) | [examples/04_generator_from_documents.rs](examples/04_generator_from_documents.rs) |
+| generator from explicit corpus (`Generator::new`, `AethelCorpus<T>`) | [examples/05_generator_new_with_corpus.rs](examples/05_generator_new_with_corpus.rs) |
+| typed loader flow (`TargetedLoader::from_file`, `AethelDoc<T>`, `TARGET_WEAPON`) | [examples/06_targeted_loader_from_file.rs](examples/06_targeted_loader_from_file.rs) |
+| loader errors (`LoaderError::ReadError`, `LoaderError::ParseError`, `LoaderError::TargetMismatch`) | [examples/07_loader_error_handling.rs](examples/07_loader_error_handling.rs) |
+| single-target merging (`merge_target_files::<T>`) | [examples/08_merge_target_files.rs](examples/08_merge_target_files.rs) |
+| merge options (`MergeOptions`, `MergerOptionError`) | [examples/09_merge_with_options.rs](examples/09_merge_with_options.rs) |
+| mixed-target merge dispatch (`merge_from_files`, `MergedAethelDoc::target`) | [examples/10_merge_mixed_targets.rs](examples/10_merge_mixed_targets.rs) |
+| merged doc conversion (`MergedAethelDoc::to_corpus`, `MergedAethelDoc::into_corpus`) | [examples/11_merged_doc_conversions.rs](examples/11_merged_doc_conversions.rs) |
+| provenance (`GeneratedField<T>`, `SourceRef`) | [examples/12_weapon_provenance.rs](examples/12_weapon_provenance.rs) |
+| custom target extensibility (`TargetedLoader`, `Generator`) | [examples/13_custom_target.rs](examples/13_custom_target.rs) |
+| parsed aetheldoc casting (`TryFrom<AethelDoc<T>>`, `SourceAethelDoc<T>`) | [examples/14_generator_from_aetheldoc.rs](examples/14_generator_from_aetheldoc.rs) |
+| single parsed aetheldoc cast (`TryFrom<AethelDoc<T>>`, `Generator::from_documents`) | [examples/15_generator_from_aetheldoc_single.rs](examples/15_generator_from_aetheldoc_single.rs) |
 
 ## data format
 
@@ -186,20 +75,13 @@ target sections are target-specific:
 - weapon: `name`, `type`, `qualities`, `lore`, `visuals`
 - person (minimal): `name.first`, `name.middle`, `name.last`
 
-see reference fixtures in:
-- [data/weapon_test_data.toml](data/weapon_test_data.toml)
-- [data/person_test_data.toml](data/person_test_data.toml)
-
-## important
-
-the `data` directory is temporary and only exists to support the current fixtures and examples.
-when it is removed, tests and examples will be updated to use the replacement test data flow.
+example fixtures are created as temporary files at runtime, so examples do not depend on checked-in data files.
 
 ## architecture overview
 
 1. loaders parse and validate target (`src/loader/**`)
 2. merge builds target corpora and keeps source-level metadata (`src/merger/mod.rs`)
-3. generators build output values from corpus candidate pools (`src/generators/**`)
+3. generators build output values from corpus candidate pools (`src/generator/**`)
 
 key model types:
 - `AethelCorpus<T>`: per-target corpus with ordered source documents
@@ -212,14 +94,21 @@ key model types:
 run all examples:
 
 ```bash
-cargo run --example weapongen_from_file
-cargo run --example weapongen_from_documents
-cargo run --example weapongen_new_corpus
-cargo run --example weapongen_provenance_from_file
-cargo run --example weapongen_provenance_from_documents
-cargo run --example weapongen_provenance_new_corpus
-cargo run --example persongen_from_file
-cargo run --example custom_target_from_file
+cargo run --example 01_weapon_from_file --features weapon-gen
+cargo run --example 02_person_from_file --features person-gen
+cargo run --example 03_weapon_deterministic_rng --features weapon-gen
+cargo run --example 04_generator_from_documents --features weapon-gen
+cargo run --example 05_generator_new_with_corpus --features weapon-gen
+cargo run --example 06_targeted_loader_from_file --features weapon-gen
+cargo run --example 07_loader_error_handling
+cargo run --example 08_merge_target_files --features weapon-gen
+cargo run --example 09_merge_with_options
+cargo run --example 10_merge_mixed_targets
+cargo run --example 11_merged_doc_conversions
+cargo run --example 12_weapon_provenance --features weapon-gen
+cargo run --example 13_custom_target
+cargo run --example 14_generator_from_aetheldoc --features weapon-gen
+cargo run --example 15_generator_from_aetheldoc_single --features weapon-gen
 ```
 
 ## adding a new target
