@@ -9,3 +9,15 @@ toml = "1.1.2"
 rand = "0.8.5"
 tracing = "0.1.44"
 sha2 = "0.10.9"
+
+
+[features]
+# enable built-in generators by default
+default = ["built-in"]
+
+# enables all generator features
+built-in = ["weapon-gen", "person-gen"]
+
+# generator features
+weapon-gen = []
+person-gen = []

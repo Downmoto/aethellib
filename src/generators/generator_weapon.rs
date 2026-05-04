@@ -5,8 +5,8 @@ use std::fmt;
 use rand::Rng;
 
 use crate::generators::{
-    GeneratedField, Generator, SourceRef, build_pool, extend_unique_source_refs,
-    StringCandidate, choose_candidate
+    GeneratedField, Generator, SourceRef,
+    utils::{StringCandidate, build_pool, extend_unique_source_refs, choose_candidate}
 };
 use crate::loader::loader_weapon::WeaponLoader;
 use crate::merger::{AethelCorpus, SourceAethelDoc};

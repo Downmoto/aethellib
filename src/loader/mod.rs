@@ -1,6 +1,8 @@
 //! loader primitives for parsing and validating aethel source documents.
 
+#[cfg(feature = "person-gen")]
 pub mod loader_person;
+#[cfg(feature = "weapon-gen")]
 pub mod loader_weapon;
 
 use serde::{Deserialize, de::DeserializeOwned};

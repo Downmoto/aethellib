@@ -3,7 +3,8 @@
 use rand::Rng;
 
 use crate::generators::{
-    GeneratedField, Generator, SourceRef, StringCandidate, build_pool, extend_unique_source_refs, choose_candidate
+    GeneratedField, Generator, SourceRef, 
+    utils::{StringCandidate, build_pool, extend_unique_source_refs, choose_candidate}
 };
 use crate::loader::loader_person::PersonLoader;
 use crate::merger::{AethelCorpus, SourceAethelDoc};
