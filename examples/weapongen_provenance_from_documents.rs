@@ -1,5 +1,6 @@
 //! purpose: show `from_documents` generation plus printing provenance source refs for generated fields.
 
+use aethellib::generators::Generator;
 use aethellib::generators::SourceRef;
 use aethellib::generators::generator_weapon::{GeneratedWeapon, WeaponGenerator};
 use aethellib::loader::loader_weapon::{

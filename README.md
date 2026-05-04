@@ -1,73 +1,161 @@
-# Aethillib
+# aethellib
 
-## breaking api update
+aethellib is a rust library for loading, merging, and generating aethel target datasets from toml files.
 
-the merge pipeline is now corpus-based. instead of flattening all input files into a single data blob with one header, merge output now retains every source document and its own metadata.
+it currently supports:
+- weapon target generation
+- person target generation (minimal primitive-name model)
 
-## what changed
+## features
 
-1. `merge::merge_from_files` returns corpus variants that contain `documents`.
-2. each source document now has `source_id`, `source_hash`, `source_path`, `header`, and `data`.
-3. source ids are derived from canonicalized document content plus target.
-4. identical content still gets unique per-corpus ids using a deterministic suffix.
-5. `generators::generator_weapon::WeaponGenerator` now consumes corpus docs and emits provenance-rich output.
-6. `GeneratedWeapon` fields are now `GeneratedField<T>` values, so every generated field can expose source references.
-7. `MergedAethelDoc` now includes `as_weapon()` and `into_weapon()` accessors for cleaner variant extraction.
-8. generators now expose deterministic generation via `generate_with_rng(...)`.
+- typed target loaders with header validation
+- corpus-based merge pipeline that preserves source metadata per input file
+- deterministic source identity (`source_hash`, `source_id`, `source_path`)
+- provenance-aware generated fields via `GeneratedField<T>` and `SourceRef`
+- deterministic generation support through `generate_with_rng(...)`
+- target-extensible architecture for loaders, merge variants, and generators
 
-## metadata behavior
+## installation
 
-1. `header.version` remains file-specific metadata for downstream consumers.
-2. merge compatibility is target-only.
-3. different source versions can be merged together.
-4. duplicate header names are allowed.
+add this crate to your `Cargo.toml`:
 
-## migration notes
-
-old usage:
-
-```rust
-let docs = merge::merge_from_files(&paths)?;
-let weapon_doc = match &docs[0] {
-	merge::MergedAethelDoc::Weapon(doc) => doc,
-};
-let generator = generators::generator_weapon::WeaponGenerator::new(weapon_doc.clone());
+```toml
+[dependencies]
+aethellib = { git = "https://github.com/Downmoto/aethellib", branch = "master" }
 ```
 
-new usage:
+## quick start
+
+### from a single weapon file
 
 ```rust
-let docs = merge::merge_from_files(&paths)?;
-let weapon_corpus = docs.into_iter().next().unwrap().into_weapon().unwrap();
+use aethellib::generators::Generator;
+use aethellib::generators::generator_weapon::WeaponGenerator;
 
-let generator = generators::generator_weapon::WeaponGenerator::new(weapon_corpus);
+let generator = WeaponGenerator::from_file("data/weapon_test_data.toml")?;
 let generated = generator.generate();
 
-println!("name: {}", generated.name.value);
-if let Some(rarity) = &generated.rarity {
-	for source in &rarity.source_refs {
-		println!("rarity from {} ({})", source.source_name, source.source_id);
+println!("weapon: {}", generated.name.value);
+```
+
+### merge mixed targets from multiple files
+
+```rust
+use aethellib::merge::{MergedAethelDoc, merge_from_files};
+use aethellib::generators::Generator;
+use aethellib::generators::generator_weapon::WeaponGenerator;
+use aethellib::generators::generator_person::PersonGenerator;
+
+let merged = merge_from_files(&[
+	"data/person_test_data.toml",
+	"data/weapon_test_data.toml",
+])?;
+
+for doc in merged {
+	match doc {
+		MergedAethelDoc::Person(corpus) => {
+			println!("person corpus docs: {}", corpus.documents.len());
+			let generator = PersonGenerator::new(corpus);
+			let generated = generator.generate();
+			// ...
+		}
+		MergedAethelDoc::Weapon(corpus) => {
+			println!("weapon corpus docs: {}", corpus.documents.len());
+			let generator = WeaponGenerator::new(corpus);
+			let generated = generator.generate();
+			// ...
+		}
 	}
 }
 ```
 
-## deterministic generation
-
-use `generate_with_rng(...)` whenever you need reproducible generation during tests or debugging.
+### deterministic generation
 
 ```rust
-use rand::rngs::StdRng;
 use rand::SeedableRng;
+use rand::rngs::StdRng;
 
+use aethellib::generators::Generator;
+use aethellib::generators::generator_person::PersonGenerator;
+
+let generator = PersonGenerator::from_file("data/person_test_data.toml")?;
 let mut rng = StdRng::seed_from_u64(42);
 let generated = generator.generate_with_rng(&mut rng);
+
+println!("person: {}", generated.name.value);
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-## error diagnostics
+## data format
 
-loader and merge read/parse errors now include file path context in error messages.
+all input toml files must include a `header` section:
 
-example shape:
+```toml
+[header]
+name = "dataset name"
+target = "weapon" # or "person"
+desc = "optional"
+author = "optional"
+version = "optional"
+```
+
+target sections are target-specific:
+
+- weapon: `name`, `type`, `qualities`, `lore`, `visuals`
+- person (minimal): `name.first`, `name.middle`, `name.last`
+
+see reference fixtures in:
+- [data/weapon_test_data.toml](data/weapon_test_data.toml)
+- [data/person_test_data.toml](data/person_test_data.toml)
+
+## architecture overview
+
+1. loaders parse and validate target (`src/loader/**`)
+2. merge builds target corpora and keeps source-level metadata (`src/merge/mod.rs`)
+3. generators build output values from corpus candidate pools (`src/generators/**`)
+
+key model types:
+- `AethelCorpus<T>`: per-target corpus with ordered source documents
+- `SourceAethelDoc<T>`: one source document with metadata + body
+- `MergedAethelDoc`: mixed-target merge result enum
+- `GeneratedField<T>`: generated value + provenance refs
+
+## examples
+
+run all examples:
+
+```bash
+cargo run --example weapongen_from_file
+cargo run --example weapongen_from_documents
+cargo run --example weapongen_new_corpus
+cargo run --example weapongen_provenance_from_file
+cargo run --example weapongen_provenance_from_documents
+cargo run --example weapongen_provenance_new_corpus
+cargo run --example persongen_from_file
+```
+
+## adding a new target
+
+use the exact target authoring guide:
+- [docs/adding-new-target.md](docs/adding-new-target.md)
+
+that document covers loader wiring, merge variant/accessors, generator trait implementation, fixtures, tests, and validation commands.
+
+## development
+
+standard checks:
+
+```bash
+cargo test
+cargo check --examples
+cargo clippy --all-targets --all-features
+```
+
+## error model
+
+loader and merge read/parse errors include file path context.
+
+example:
 
 ```text
 unable to parse toml file 'data/weapon_bad.toml': expected a right bracket, found eof

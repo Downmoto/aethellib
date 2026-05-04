@@ -2,6 +2,7 @@
 
 use std::error::Error;
 
+use aethellib::generators::Generator;
 use aethellib::generators::SourceRef;
 use aethellib::generators::generator_weapon::{GeneratedWeapon, WeaponGenerator};
 

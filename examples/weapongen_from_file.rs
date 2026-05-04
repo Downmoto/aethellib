@@ -2,6 +2,7 @@
 
 use std::error::Error;
 
+use aethellib::generators::Generator;
 use aethellib::generators::generator_weapon::WeaponGenerator;
 
 fn main() -> Result<(), Box<dyn Error>> {

@@ -2,11 +2,12 @@
 
 use std::error::Error;
 
+use aethellib::generators::Generator;
 use aethellib::generators::SourceRef;
 use aethellib::generators::generator_weapon::{GeneratedWeapon, WeaponGenerator};
 use aethellib::loader::loader_weapon::WeaponLoader;
 use aethellib::merge::AethelCorpus;
-use aethellib::merge::merge_weapon::merge_weapon_files;
+use aethellib::merge::merge_weapon_files;
 
 fn print_refs(refs: &[SourceRef]) {
     for source in refs {
