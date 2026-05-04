@@ -1,17 +1,17 @@
 //! person-target loader schema and parsing helpers.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::loader::{TARGET_PERSON, TargetedLoader};
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// person body sections loaded from a person-target toml document.
 pub struct PersonLoader {
     /// optional name generation section.
     pub name: Option<PersonNameSection>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// primitive fragments used to compose generated person names.
 pub struct PersonNameSection {
     /// optional first-name primitives.

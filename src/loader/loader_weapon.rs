@@ -1,10 +1,10 @@
 //! weapon-target loader schema and parsing helpers.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::loader::{TARGET_WEAPON, TargetedLoader};
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// weapon body sections loaded from a weapon-target toml document.
 pub struct WeaponLoader {
     /// optional name generation section.
@@ -20,7 +20,7 @@ pub struct WeaponLoader {
     pub visuals: Option<WeaponVisualSection>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// values used to compose generated weapon names.
 pub struct WeaponNameSection {
     /// optional name prefixes.
@@ -31,7 +31,7 @@ pub struct WeaponNameSection {
     pub primitives: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// available weapon base types.
 pub struct WeaponTypeSection {
     #[serde(rename = "type")]
@@ -39,7 +39,7 @@ pub struct WeaponTypeSection {
     pub types: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// quality-related attributes for generated weapons.
 pub struct WeaponQualitiesSection {
     /// optional rarity labels.
@@ -48,7 +48,7 @@ pub struct WeaponQualitiesSection {
     pub condition: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// lore templates and lore source values.
 pub struct WeaponLoreSection {
     /// optional creator fragments.
@@ -61,7 +61,7 @@ pub struct WeaponLoreSection {
     pub templates: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// visual templates and visual source values.
 pub struct WeaponVisualSection {
     /// optional material options.

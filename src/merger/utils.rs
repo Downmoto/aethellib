@@ -179,6 +179,46 @@ where
     })
 }
 
+/// casts parsed aethel documents into source documents using merge hash/id rules.
+pub fn cast_aethel_docs_to_sources<T>(
+    documents: Vec<AethelDoc<T>>,
+) -> Result<Vec<SourceAethelDoc<T>>, MergerError>
+where
+    T: TargetedLoader + serde::Serialize,
+{
+    let mut seen_source_ids: HashMap<String, usize> = HashMap::new();
+    let mut source_documents: Vec<SourceAethelDoc<T>> = Vec::with_capacity(documents.len());
+
+    for (index, document) in documents.into_iter().enumerate() {
+        if document.header.target != T::TARGET {
+            return Err(LoaderError::TargetMismatch {
+                expected: T::TARGET.to_string(),
+                found: document.header.target,
+            }
+            .into());
+        }
+
+        let source_path = format!("<aetheldoc:{index}>");
+        let raw = toml::to_string(&document).map_err(|err| {
+            MergerError::InvalidInput(format!(
+                "unable to serialise aethel document for source hashing at '{source_path}': {err}"
+            ))
+        })?;
+        let source_hash = hash_source_content(document.header.target.as_str(), raw.as_str());
+        let source_id = make_unique_source_id(&source_hash, &mut seen_source_ids);
+
+        source_documents.push(SourceAethelDoc {
+            source_id,
+            source_hash,
+            source_path,
+            header: document.header,
+            data: document.data,
+        });
+    }
+
+    Ok(source_documents)
+}
+
 /// creates a unique source id from a base hash within one corpus build.
 fn make_unique_source_id(base_hash: &str, seen: &mut HashMap<String, usize>) -> String {
     let count = seen.entry(base_hash.to_string()).or_insert(0);

@@ -17,7 +17,7 @@ pub(self) mod utils;
 use rand::Rng;
 use rand::thread_rng;
 
-use crate::loader::{AethelDoc, TargetedLoader, error::LoaderError};
+use crate::loader::TargetedLoader;
 use crate::merger::merge_target_files;
 use crate::merger::{AethelCorpus, error::MergerError, SourceAethelDoc};
 
@@ -40,38 +40,6 @@ pub trait Generator: Sized {
 			target: <Self::Loader as TargetedLoader>::TARGET.to_string(),
 			documents,
 		})
-	}
-
-	/// creates a generator from one parsed aethel document.
-	fn from_aethel_doc(document: AethelDoc<Self::Loader>) -> Result<Self, MergerError> {
-		Self::from_aethel_docs(vec![document])
-	}
-
-	/// creates a generator from parsed aethel documents.
-	fn from_aethel_docs(documents: Vec<AethelDoc<Self::Loader>>) -> Result<Self, MergerError> {
-		let mut source_documents: Vec<SourceAethelDoc<Self::Loader>> =
-			Vec::with_capacity(documents.len());
-
-		for (index, document) in documents.into_iter().enumerate() {
-			if document.header.target != <Self::Loader as TargetedLoader>::TARGET {
-				return Err(LoaderError::TargetMismatch {
-					expected: <Self::Loader as TargetedLoader>::TARGET.to_string(),
-					found: document.header.target,
-				}
-				.into());
-			}
-
-			let source_id = format!("aetheldoc-{index}");
-			source_documents.push(SourceAethelDoc {
-				source_hash: source_id.clone(),
-				source_id,
-				source_path: "<aetheldoc>".to_string(),
-				header: document.header,
-				data: document.data,
-			});
-		}
-
-		Ok(Self::from_documents(source_documents))
 	}
 
 	/// loads one target file and creates a corpus-backed generator.
