@@ -2,7 +2,10 @@
 //! this demonstrates generator::from_documents and sourceaetheldoc usage.
 
 use aethellib::generator::{Generator, generator_weapon::WeaponGenerator};
-use aethellib::loader::{AthelDocHeader, TARGET_WEAPON, loader_weapon::{WeaponLoader, WeaponNameSection, WeaponTypeSection}};
+use aethellib::loader::{
+    AthelDocHeader, TARGET_WEAPON,
+    loader_weapon::{WeaponLoader, WeaponNameSection, WeaponTypeSection},
+};
 use aethellib::merger::SourceAethelDoc;
 
 fn main() {

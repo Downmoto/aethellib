@@ -4,11 +4,11 @@
 #[path = "common/mod.rs"]
 mod support;
 
-use support::{TempTomlFile, weapon_document};
-use aethellib::loader::{TargetedLoader, loader_weapon::WeaponLoader};
 use aethellib::generator::{Generator, generator_weapon::WeaponGenerator};
+use aethellib::loader::{TargetedLoader, loader_weapon::WeaponLoader};
 use aethellib::merger::SourceAethelDocs;
 use std::error::Error;
+use support::{TempTomlFile, weapon_document};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // load + validate two parsed docs first. in real applications this often

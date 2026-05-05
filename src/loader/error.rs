@@ -115,7 +115,10 @@ mod tests {
         );
 
         assert!(error.to_string().contains("custom-file.toml"));
-        assert!(matches!(error, LoaderError::ReadError { path: Some(_), .. }));
+        assert!(matches!(
+            error,
+            LoaderError::ReadError { path: Some(_), .. }
+        ));
     }
 
     #[test]
@@ -124,6 +127,9 @@ mod tests {
         let error = LoaderError::parse_for_path("invalid.toml", parse_source);
 
         assert!(error.to_string().contains("invalid.toml"));
-        assert!(matches!(error, LoaderError::ParseError { path: Some(_), .. }));
+        assert!(matches!(
+            error,
+            LoaderError::ParseError { path: Some(_), .. }
+        ));
     }
 }

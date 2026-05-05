@@ -208,9 +208,11 @@ materials = ["steel"]
         assert_eq!(loaded.documents[2].header.name, "part 3");
         assert_eq!(loaded.documents[3].header.name, "part 4");
 
-        assert!(loaded
-            .documents
-            .iter()
-            .all(|document| document.header.target == TARGET_WEAPON));
+        assert!(
+            loaded
+                .documents
+                .iter()
+                .all(|document| document.header.target == TARGET_WEAPON)
+        );
     }
 }

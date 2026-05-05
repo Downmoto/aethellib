@@ -17,19 +17,19 @@ impl Default for MergeOptions {
     }
 }
 
-
 #[derive(Debug)]
 pub enum MergerOptionError {
-    IdenticalNameAllowed {
-        header: String
-    }
+    IdenticalNameAllowed { header: String },
 }
 
 impl fmt::Display for MergerOptionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::IdenticalNameAllowed{header} => write!(f, "duplicate header.name '{}' is not allowed when identical_names_allowed is false",
-                header)
+            Self::IdenticalNameAllowed { header } => write!(
+                f,
+                "duplicate header.name '{}' is not allowed when identical_names_allowed is false",
+                header
+            ),
         }
     }
 }
@@ -38,8 +38,8 @@ impl std::error::Error for MergerOptionError {}
 
 #[cfg(test)]
 mod tests {
-    use crate::merger::merge_from_files;
     use crate::merger::MergerError;
+    use crate::merger::merge_from_files;
     use crate::test_support::{TempTomlFile, weapon_document};
 
     use super::*;
@@ -76,7 +76,9 @@ suffix = ["of Dawn"]
 
         assert!(matches!(
             result,
-            Err(MergerError::MergerOption(MergerOptionError::IdenticalNameAllowed { .. }))
+            Err(MergerError::MergerOption(
+                MergerOptionError::IdenticalNameAllowed { .. }
+            ))
         ));
     }
 }

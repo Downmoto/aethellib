@@ -1,12 +1,20 @@
 //! shared merge utilities for parsing, corpus assembly, and source identity.
 
-use std::{collections::{HashMap, HashSet}, fs};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+};
 
 use sha2::{Digest, Sha256};
 
-use crate::{loader::{AethelDoc, Target, TargetedLoader, error::LoaderError}, merger::{AethelCorpus, MergeSourceInput, ParsedMergeInput, SourceAethelDoc, error::MergerError, merger_options::{MergeOptions, MergerOptionError}}};
-
-
+use crate::{
+    loader::{AethelDoc, Target, TargetedLoader, error::LoaderError},
+    merger::{
+        AethelCorpus, MergeSourceInput, ParsedMergeInput, SourceAethelDoc,
+        error::MergerError,
+        merger_options::{MergeOptions, MergerOptionError},
+    },
+};
 
 /// parses source files once so dispatch and target ingestion share the same payload.
 pub fn parse_merge_inputs(paths: &[&str]) -> Result<Vec<ParsedMergeInput>, MergerError> {
@@ -335,17 +343,19 @@ suffix = ["iron"]
 "#,
         ));
 
-        let corpus = build_corpus_from_paths::<TestWeaponLoader>(&[weapon.path_str()], None)
-            .unwrap();
+        let corpus =
+            build_corpus_from_paths::<TestWeaponLoader>(&[weapon.path_str()], None).unwrap();
 
         assert_eq!(corpus.target, "weapon");
         assert_eq!(corpus.documents.len(), 1);
-        assert!(corpus.documents[0]
-            .data
-            .name
-            .as_ref()
-            .and_then(|name| name.suffix.as_ref())
-            .is_some());
+        assert!(
+            corpus.documents[0]
+                .data
+                .name
+                .as_ref()
+                .and_then(|name| name.suffix.as_ref())
+                .is_some()
+        );
     }
 
     #[test]
@@ -381,7 +391,8 @@ suffix = ["of dawn"]
             })
             .collect();
 
-        let from_sources = build_corpus_from_sources::<TestWeaponLoader>(&source_inputs, None).unwrap();
+        let from_sources =
+            build_corpus_from_sources::<TestWeaponLoader>(&source_inputs, None).unwrap();
 
         assert_eq!(from_paths.target, from_sources.target);
         assert_eq!(from_paths.documents.len(), from_sources.documents.len());
@@ -398,10 +409,16 @@ suffix = ["of dawn"]
             assert_eq!(left.header.target, right.header.target);
             assert_eq!(left.header.version, right.header.version);
             assert_eq!(
-                left.data.name.as_ref().and_then(|name| name.suffix.as_ref()),
-                right.data.name.as_ref().and_then(|name| name.suffix.as_ref())
+                left.data
+                    .name
+                    .as_ref()
+                    .and_then(|name| name.suffix.as_ref()),
+                right
+                    .data
+                    .name
+                    .as_ref()
+                    .and_then(|name| name.suffix.as_ref())
             );
         }
     }
-
 }

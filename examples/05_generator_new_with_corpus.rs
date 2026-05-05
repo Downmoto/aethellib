@@ -2,7 +2,10 @@
 //! this demonstrates aethelcorpus and sourceaetheldoc wiring.
 
 use aethellib::generator::{Generator, generator_weapon::WeaponGenerator};
-use aethellib::loader::{AthelDocHeader, TARGET_WEAPON, loader_weapon::{WeaponLoader, WeaponNameSection}};
+use aethellib::loader::{
+    AthelDocHeader, TARGET_WEAPON,
+    loader_weapon::{WeaponLoader, WeaponNameSection},
+};
 use aethellib::merger::{AethelCorpus, SourceAethelDoc};
 
 fn main() {

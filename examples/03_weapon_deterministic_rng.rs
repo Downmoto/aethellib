@@ -37,7 +37,10 @@ type = ["axe", "blade"]
     // assert both a simple field and an optional field to show that deterministic
     // behaviour applies across the whole generated payload.
     assert_eq!(a.name.value, b.name.value);
-    assert_eq!(a.weapon_type.as_ref().map(|field| &field.value), b.weapon_type.as_ref().map(|field| &field.value));
+    assert_eq!(
+        a.weapon_type.as_ref().map(|field| &field.value),
+        b.weapon_type.as_ref().map(|field| &field.value)
+    );
 
     println!("deterministic name: {}", a.name.value);
     Ok(())

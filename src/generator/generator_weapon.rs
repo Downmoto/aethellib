@@ -6,11 +6,10 @@ use rand::Rng;
 
 use crate::generator::{
     GeneratedField, Generator, SourceRef,
-    utils::{StringCandidate, build_pool, extend_unique_source_refs, choose_candidate}
+    utils::{StringCandidate, build_pool, choose_candidate, extend_unique_source_refs},
 };
 use crate::loader::loader_weapon::WeaponLoader;
 use crate::merger::{AethelCorpus, SourceAethelDoc};
-
 
 #[derive(Debug)]
 /// generated weapon payload containing assembled fields.
@@ -130,10 +129,14 @@ impl WeaponCandidateIndex {
     fn from_documents(documents: &[SourceAethelDoc<WeaponLoader>]) -> Self {
         Self {
             name_prefix: build_pool(documents, "name", "prefix", |doc| {
-                doc.name.as_ref().and_then(|section| section.prefix.as_ref())
+                doc.name
+                    .as_ref()
+                    .and_then(|section| section.prefix.as_ref())
             }),
             name_suffix: build_pool(documents, "name", "suffix", |doc| {
-                doc.name.as_ref().and_then(|section| section.suffix.as_ref())
+                doc.name
+                    .as_ref()
+                    .and_then(|section| section.suffix.as_ref())
             }),
             name_primitives: build_pool(documents, "name", "primitives", |doc| {
                 doc.name
@@ -156,16 +159,22 @@ impl WeaponCandidateIndex {
                     .and_then(|section| section.condition.as_ref())
             }),
             lore_templates: build_pool(documents, "lore", "templates", |doc| {
-                doc.lore.as_ref().and_then(|section| section.templates.as_ref())
+                doc.lore
+                    .as_ref()
+                    .and_then(|section| section.templates.as_ref())
             }),
             lore_creators: build_pool(documents, "lore", "creators", |doc| {
-                doc.lore.as_ref().and_then(|section| section.creators.as_ref())
+                doc.lore
+                    .as_ref()
+                    .and_then(|section| section.creators.as_ref())
             }),
             lore_deeds: build_pool(documents, "lore", "deeds", |doc| {
                 doc.lore.as_ref().and_then(|section| section.deeds.as_ref())
             }),
             lore_quirks: build_pool(documents, "lore", "quirks", |doc| {
-                doc.lore.as_ref().and_then(|section| section.quirks.as_ref())
+                doc.lore
+                    .as_ref()
+                    .and_then(|section| section.quirks.as_ref())
             }),
             visual_templates: build_pool(documents, "visuals", "templates", |doc| {
                 doc.visuals
@@ -197,7 +206,10 @@ impl WeaponCandidateIndex {
 }
 
 /// builds a generated name with aggregated provenance refs.
-fn build_name(index: &WeaponCandidateIndex, rng: &mut (impl Rng + ?Sized)) -> GeneratedField<String> {
+fn build_name(
+    index: &WeaponCandidateIndex,
+    rng: &mut (impl Rng + ?Sized),
+) -> GeneratedField<String> {
     let prefix = choose_candidate(&index.name_prefix, rng);
     let suffix = choose_candidate(&index.name_suffix, rng);
     let (core, core_refs) = build_primitive_core(&index.name_primitives, rng)
@@ -325,14 +337,14 @@ fn build_visuals(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::SeedableRng;
-    use rand::rngs::StdRng;
     use crate::loader::AthelDocHeader;
     use crate::loader::TARGET_WEAPON;
     use crate::loader::loader_weapon::{
         WeaponLoreSection, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
         WeaponVisualSection,
     };
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
 
     fn test_source_doc(
         source_id: &str,
@@ -382,7 +394,9 @@ mod tests {
                     colours: Some(vec!["grey".to_string()]),
                     accents: Some(vec!["in leather".to_string()]),
                     features: Some(vec!["etched with runes".to_string()]),
-                    templates: Some(vec!["made of {material}, {accent}, {colour}, {feature}".to_string()]),
+                    templates: Some(vec![
+                        "made of {material}, {accent}, {colour}, {feature}".to_string(),
+                    ]),
                 }),
             },
         );
@@ -396,7 +410,6 @@ mod tests {
         let generated = generator.generate();
 
         assert!(!generated.name.value.is_empty());
-
     }
 
     #[test]

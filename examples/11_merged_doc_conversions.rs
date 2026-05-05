@@ -65,7 +65,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // into_corpus consumes the merged value (or a clone of it), which can be
     // preferable when you do not need the untyped version afterwards.
     let owned = merged[0].clone().into_corpus::<AlphaLoader>()?;
-    println!("into_corpus consumed clone with {} document", owned.documents.len());
+    println!(
+        "into_corpus consumed clone with {} document",
+        owned.documents.len()
+    );
 
     Ok(())
 }

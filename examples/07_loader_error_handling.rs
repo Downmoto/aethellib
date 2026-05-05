@@ -4,7 +4,9 @@
 #[path = "common/mod.rs"]
 mod support;
 
-use aethellib::loader::{AethelDoc, TARGET_PERSON, TARGET_WEAPON, TargetedLoader, error::LoaderError};
+use aethellib::loader::{
+    AethelDoc, TARGET_PERSON, TARGET_WEAPON, TargetedLoader, error::LoaderError,
+};
 use serde::Deserialize;
 use std::error::Error;
 use support::TempTomlFile;
@@ -32,9 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // 3) target mismatch: parsed header.target does not match loader TARGET.
-    let mismatch = TempTomlFile::new(
-        "[header]\nname = \"wrong target\"\ntarget = \"person\"\n",
-    );
+    let mismatch = TempTomlFile::new("[header]\nname = \"wrong target\"\ntarget = \"person\"\n");
     match EmptyLoader::from_file(mismatch.path_str()) {
         Err(LoaderError::TargetMismatch { expected, found }) => {
             assert_eq!(expected, TARGET_WEAPON);
@@ -46,9 +46,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // direct parsing into AethelDoc is useful when you want to inspect raw
     // structured content without invoking TargetedLoader validation.
-    let parsed: AethelDoc<toml::Table> = toml::from_str(
-        "[header]\nname = \"demo\"\ntarget = \"weapon\"\n",
-    )?;
+    let parsed: AethelDoc<toml::Table> =
+        toml::from_str("[header]\nname = \"demo\"\ntarget = \"weapon\"\n")?;
     println!("parsed header via aetheldoc: {}", parsed.header.name);
 
     Ok(())

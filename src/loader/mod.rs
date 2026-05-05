@@ -1,11 +1,10 @@
 //! loader primitives for parsing and validating aethel source documents.
 
+pub mod error;
 #[cfg(feature = "person-gen")]
 pub mod loader_person;
 #[cfg(feature = "weapon-gen")]
 pub mod loader_weapon;
-pub mod error;
-
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::fs;
@@ -54,8 +53,8 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
         let path_ref = path.as_ref();
         let raw = fs::read_to_string(path_ref)
             .map_err(|source| LoaderError::read_for_path(path_ref, source))?;
-        let parsed: AethelDoc<Self> = toml::from_str(&raw)
-            .map_err(|source| LoaderError::parse_for_path(path_ref, source))?;
+        let parsed: AethelDoc<Self> =
+            toml::from_str(&raw).map_err(|source| LoaderError::parse_for_path(path_ref, source))?;
 
         if parsed.header.target != Self::TARGET {
             return Err(LoaderError::TargetMismatch {

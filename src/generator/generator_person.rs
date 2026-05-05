@@ -3,12 +3,11 @@
 use rand::Rng;
 
 use crate::generator::{
-    GeneratedField, Generator, SourceRef, 
-    utils::{StringCandidate, build_pool, extend_unique_source_refs, choose_candidate}
+    GeneratedField, Generator, SourceRef,
+    utils::{StringCandidate, build_pool, choose_candidate, extend_unique_source_refs},
 };
 use crate::loader::loader_person::PersonLoader;
 use crate::merger::{AethelCorpus, SourceAethelDoc};
-
 
 #[derive(Debug)]
 /// generated person payload containing assembled fields.
@@ -54,7 +53,9 @@ impl PersonCandidateIndex {
                 doc.name.as_ref().and_then(|section| section.first.as_ref())
             }),
             middle_primitives: build_pool(documents, "name", "middle", |doc| {
-                doc.name.as_ref().and_then(|section| section.middle.as_ref())
+                doc.name
+                    .as_ref()
+                    .and_then(|section| section.middle.as_ref())
             }),
             last_primitives: build_pool(documents, "name", "last", |doc| {
                 doc.name.as_ref().and_then(|section| section.last.as_ref())
@@ -63,10 +64,11 @@ impl PersonCandidateIndex {
     }
 }
 
-
-
 /// builds a generated full name with merged provenance references.
-fn build_name(index: &PersonCandidateIndex, rng: &mut (impl Rng + ?Sized)) -> GeneratedField<String> {
+fn build_name(
+    index: &PersonCandidateIndex,
+    rng: &mut (impl Rng + ?Sized),
+) -> GeneratedField<String> {
     let (first, first_refs) = build_primitive_segment(&index.first_primitives, rng)
         .unwrap_or_else(|| ("nam".to_string(), Vec::new()));
     let middle_segment = build_primitive_segment(&index.middle_primitives, rng);

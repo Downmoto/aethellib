@@ -1,15 +1,17 @@
 //! central target-based merge orchestration for aethel documents.
 
-pub mod merger_options;
 pub mod error;
+pub mod merger_options;
 pub(self) mod utils;
-
 
 use std::collections::HashMap;
 
-use crate::loader::{AethelDoc, AthelDocHeader, error::LoaderError, Target, TargetedLoader};
+use crate::loader::{AethelDoc, AthelDocHeader, Target, TargetedLoader, error::LoaderError};
 use crate::merger::error::MergerError;
-use crate::merger::utils::{build_corpus_from_paths, build_raw_corpus_from_sources, cast_aethel_docs_to_sources, parse_merge_inputs};
+use crate::merger::utils::{
+    build_corpus_from_paths, build_raw_corpus_from_sources, cast_aethel_docs_to_sources,
+    parse_merge_inputs,
+};
 use merger_options::MergeOptions;
 
 /// parsed source used by merge dispatch before target-specific ingestion.
@@ -158,7 +160,9 @@ where
     type Error = MergerError;
 
     fn try_from(documents: Vec<AethelDoc<T>>) -> Result<Self, Self::Error> {
-        Ok(SourceAethelDocs(cast_aethel_docs_to_sources::<T>(documents)?))
+        Ok(SourceAethelDocs(cast_aethel_docs_to_sources::<T>(
+            documents,
+        )?))
     }
 }
 
@@ -273,10 +277,12 @@ suffix = ["of dawn"]
         assert_eq!(merged[0].target(), TARGET_WEAPON);
 
         assert_eq!(merged[0].documents.len(), 2);
-        assert!(merged[0]
-            .documents
-            .iter()
-            .all(|source| source.header.target == TARGET_WEAPON));
+        assert!(
+            merged[0]
+                .documents
+                .iter()
+                .all(|source| source.header.target == TARGET_WEAPON)
+        );
     }
 
     #[test]
@@ -309,18 +315,22 @@ prefix = ["iron"]
         assert_eq!(person.documents.len(), 1);
         assert_eq!(weapon.documents.len(), 1);
 
-        assert!(weapon.documents[0]
-            .data
-            .name
-            .as_ref()
-            .and_then(|name| name.prefix.as_ref())
-            .is_some());
-        assert!(person.documents[0]
-            .data
-            .name
-            .as_ref()
-            .and_then(|name| name.first.as_ref())
-            .is_some());
+        assert!(
+            weapon.documents[0]
+                .data
+                .name
+                .as_ref()
+                .and_then(|name| name.prefix.as_ref())
+                .is_some()
+        );
+        assert!(
+            person.documents[0]
+                .data
+                .name
+                .as_ref()
+                .and_then(|name| name.first.as_ref())
+                .is_some()
+        );
     }
 
     #[test]
@@ -347,12 +357,18 @@ version = "1.1"
 [name]
 suffix = ["of Dawn"]
 "#,
-    );
+        );
 
-    let merged = merge_from_files(&[temp_a.path_str(), temp_b.path_str()], None).unwrap();
+        let merged = merge_from_files(&[temp_a.path_str(), temp_b.path_str()], None).unwrap();
         assert_eq!(merged[0].documents.len(), 2);
-        assert_eq!(merged[0].documents[0].header.version.as_deref(), Some("1.0"));
-        assert_eq!(merged[0].documents[1].header.version.as_deref(), Some("1.1"));
+        assert_eq!(
+            merged[0].documents[0].header.version.as_deref(),
+            Some("1.0")
+        );
+        assert_eq!(
+            merged[0].documents[1].header.version.as_deref(),
+            Some("1.1")
+        );
     }
 
     #[test]
@@ -371,8 +387,14 @@ prefix = ["Iron"]
         let merged = merge_from_files(&[temp_a.path_str(), temp_b.path_str()], None).unwrap();
 
         assert_eq!(merged[0].documents.len(), 2);
-        assert_ne!(merged[0].documents[0].source_id, merged[0].documents[1].source_id);
-        assert_eq!(merged[0].documents[0].source_hash, merged[0].documents[1].source_hash);
+        assert_ne!(
+            merged[0].documents[0].source_id,
+            merged[0].documents[1].source_id
+        );
+        assert_eq!(
+            merged[0].documents[0].source_hash,
+            merged[0].documents[1].source_hash
+        );
     }
 
     #[test]
@@ -485,7 +507,8 @@ first = ["al"]
             })
             .collect();
 
-        let from_sources = build_corpus_from_sources::<TestPersonLoader>(&source_inputs, None).unwrap();
+        let from_sources =
+            build_corpus_from_sources::<TestPersonLoader>(&source_inputs, None).unwrap();
 
         assert_eq!(from_paths.target, from_sources.target);
         assert_eq!(from_paths.documents.len(), from_sources.documents.len());
@@ -510,11 +533,13 @@ first = ["al"]
             from_sources.documents[0].header.target
         );
 
-        assert!(from_paths.documents[0]
-            .data
-            .name
-            .as_ref()
-            .and_then(|name| name.first.as_ref())
-            .is_some());
+        assert!(
+            from_paths.documents[0]
+                .data
+                .name
+                .as_ref()
+                .and_then(|name| name.first.as_ref())
+                .is_some()
+        );
     }
 }

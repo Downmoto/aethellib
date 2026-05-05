@@ -49,13 +49,9 @@ pub(crate) fn toml_document(name: &str, target: &str, body: &str) -> String {
     let trimmed_body = body.trim();
 
     if trimmed_body.is_empty() {
-        format!(
-            "[header]\nname = \"{name}\"\ntarget = \"{target}\"\n"
-        )
+        format!("[header]\nname = \"{name}\"\ntarget = \"{target}\"\n")
     } else {
-        format!(
-            "[header]\nname = \"{name}\"\ntarget = \"{target}\"\n\n{trimmed_body}\n"
-        )
+        format!("[header]\nname = \"{name}\"\ntarget = \"{target}\"\n\n{trimmed_body}\n")
     }
 }
 

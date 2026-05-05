@@ -11,11 +11,23 @@ use support::{TempTomlFile, toml_document};
 fn main() -> Result<(), Box<dyn Error>> {
     // feed mixed targets in a deliberate order so we can demonstrate that
     // merge_from_files preserves first-seen target ordering.
-    let alpha_one = TempTomlFile::new(&toml_document("alpha one", "alpha", "[name]\nvalue = \"a\""));
+    let alpha_one = TempTomlFile::new(&toml_document(
+        "alpha one",
+        "alpha",
+        "[name]\nvalue = \"a\"",
+    ));
     let beta_one = TempTomlFile::new(&toml_document("beta one", "beta", "[name]\nvalue = \"b\""));
-    let alpha_two = TempTomlFile::new(&toml_document("alpha two", "alpha", "[name]\nvalue = \"c\""));
+    let alpha_two = TempTomlFile::new(&toml_document(
+        "alpha two",
+        "alpha",
+        "[name]\nvalue = \"c\"",
+    ));
 
-    let paths = [alpha_one.path_str(), beta_one.path_str(), alpha_two.path_str()];
+    let paths = [
+        alpha_one.path_str(),
+        beta_one.path_str(),
+        alpha_two.path_str(),
+    ];
 
     // output is one MergedAethelDoc per target, not one per source file.
     let merged = merge_from_files(&paths, None)?;
@@ -28,7 +40,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert_eq!(merged[1].documents.len(), 1);
 
     for doc in &merged {
-        println!("target {} has {} sources", doc.target(), doc.documents.len());
+        println!(
+            "target {} has {} sources",
+            doc.target(),
+            doc.documents.len()
+        );
     }
 
     Ok(())

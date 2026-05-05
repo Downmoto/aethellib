@@ -60,9 +60,7 @@ pub fn toml_document(name: &str, target: &str, body: &str) -> String {
     if trimmed_body.is_empty() {
         format!("[header]\nname = \"{name}\"\ntarget = \"{target}\"\n")
     } else {
-        format!(
-            "[header]\nname = \"{name}\"\ntarget = \"{target}\"\n\n{trimmed_body}\n"
-        )
+        format!("[header]\nname = \"{name}\"\ntarget = \"{target}\"\n\n{trimmed_body}\n")
     }
 }
 

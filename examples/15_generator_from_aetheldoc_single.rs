@@ -4,11 +4,11 @@
 #[path = "common/mod.rs"]
 mod support;
 
-use support::{TempTomlFile, weapon_document};
-use aethellib::loader::{TargetedLoader, loader_weapon::WeaponLoader};
 use aethellib::generator::{Generator, generator_weapon::WeaponGenerator};
+use aethellib::loader::{TargetedLoader, loader_weapon::WeaponLoader};
 use aethellib::merger::SourceAethelDoc;
 use std::error::Error;
+use support::{TempTomlFile, weapon_document};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // load + validate one parsed doc first. this pattern is useful when your
@@ -31,6 +31,9 @@ primitives = ["ka", "lor"]
     let generator = WeaponGenerator::from_documents(vec![source_document]);
     let generated = generator.generate();
 
-    println!("generated from single aetheldoc cast: {}", generated.name.value);
+    println!(
+        "generated from single aetheldoc cast: {}",
+        generated.name.value
+    );
     Ok(())
 }
