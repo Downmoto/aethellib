@@ -50,8 +50,8 @@ start with these:
 | loader errors (`LoaderError::ReadError`, `LoaderError::ParseError`, `LoaderError::TargetMismatch`) | [examples/07_loader_error_handling.rs](examples/07_loader_error_handling.rs) |
 | single-target merging (`merge_target_files::<T>`) | [examples/08_merge_target_files.rs](examples/08_merge_target_files.rs) |
 | merge options (`MergeOptions`, `MergerOptionError`) | [examples/09_merge_with_options.rs](examples/09_merge_with_options.rs) |
-| mixed-target merge dispatch (`merge_from_files`, `MergedAethelDoc::target`) | [examples/10_merge_mixed_targets.rs](examples/10_merge_mixed_targets.rs) |
-| merged doc conversion (`MergedAethelDoc::to_corpus`, `MergedAethelDoc::into_corpus`) | [examples/11_merged_doc_conversions.rs](examples/11_merged_doc_conversions.rs) |
+| mixed-target merge dispatch (`merge_from_files`, `AethelCorpus::target`) | [examples/10_merge_mixed_targets.rs](examples/10_merge_mixed_targets.rs) |
+| merged doc conversion (`AethelCorpus::to_corpus`, `AethelCorpus::into_corpus`) | [examples/11_merged_doc_conversions.rs](examples/11_merged_doc_conversions.rs) |
 | provenance (`GeneratedField<T>`, `SourceRef`) | [examples/12_weapon_provenance.rs](examples/12_weapon_provenance.rs) |
 | custom target extensibility (`TargetedLoader`, `Generator`) | [examples/13_custom_target.rs](examples/13_custom_target.rs) |
 | parsed aetheldoc casting (`SourceAethelDoc::from_aetheldocs`, `SourceAethelDoc<T>`) | [examples/14_generator_from_aetheldoc.rs](examples/14_generator_from_aetheldoc.rs) |
@@ -86,7 +86,7 @@ example fixtures are created as temporary files at runtime, so examples do not d
 key model types:
 - `AethelCorpus<T>`: per-target corpus with ordered source documents
 - `SourceAethelDoc<T>`: one source document with metadata + body
-- `MergedAethelDoc`: mixed-target merge result carrying target id + untyped tables
+- `AethelCorpus<Mixed>`: mixed-target merge result carrying target id + untyped tables
 - `GeneratedField<T>`: generated value + provenance refs
 
 ## examples

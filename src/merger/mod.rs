@@ -29,6 +29,9 @@ struct MergeSourceInput<'a> {
     pub raw: &'a str,
 }
 
+/// untyped merged document body used for mixed-target merge flows.
+pub type Mixed = toml::Table;
+
 #[derive(Debug, Clone)]
 /// one source document retained in a target corpus.
 pub struct SourceAethelDoc<T> {
@@ -69,21 +72,14 @@ pub struct AethelCorpus<T> {
     pub documents: Vec<SourceAethelDoc<T>>,
 }
 
-#[derive(Debug, Clone)]
-/// merged target corpus with untyped body tables for generic dispatch.
-pub struct MergedAethelDoc {
-    /// target represented by this merged corpus.
-    pub target: Target,
-    /// source documents for this target with untyped body tables.
-    pub documents: Vec<SourceAethelDoc<toml::Table>>,
-}
-
-impl MergedAethelDoc {
-    /// returns the target represented by this merged document.
+impl<T> AethelCorpus<T> {
+    /// returns the target represented by this corpus.
     pub fn target(&self) -> &str {
         self.target.as_str()
     }
+}
 
+impl AethelCorpus<Mixed> {
     /// consumes this value and converts source tables into a typed corpus.
     pub fn into_corpus<T>(self) -> Result<AethelCorpus<T>, MergerError>
     where
@@ -126,13 +122,6 @@ impl MergedAethelDoc {
     {
         self.clone().into_corpus::<T>()
     }
-
-    fn from_corpus(corpus: AethelCorpus<toml::Table>) -> Self {
-        Self {
-            target: corpus.target,
-            documents: corpus.documents,
-        }
-    }
 }
 
 /// assembles a corpus for any loader that implements `TargetedLoader`.
@@ -153,7 +142,7 @@ where
 pub fn merge_from_files(
     paths: &[&str],
     opts: Option<MergeOptions>,
-) -> Result<Vec<MergedAethelDoc>, MergerError> {
+) -> Result<Vec<AethelCorpus<Mixed>>, MergerError> {
     if paths.is_empty() {
         return Err(MergerError::InvalidInput(
             "at least one path is required for merge".to_string(),
@@ -180,11 +169,11 @@ pub fn merge_from_files(
         });
     }
 
-    let mut merged_docs: Vec<MergedAethelDoc> = Vec::with_capacity(target_order.len());
+    let mut merged_docs: Vec<AethelCorpus<Mixed>> = Vec::with_capacity(target_order.len());
     for target in target_order {
         if let Some(sources) = grouped_sources.remove(&target) {
             let corpus = build_raw_corpus_from_sources(&sources, Some(options))?;
-            merged_docs.push(MergedAethelDoc::from_corpus(corpus));
+            merged_docs.push(corpus);
         }
     }
 

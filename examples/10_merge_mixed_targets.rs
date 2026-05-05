@@ -1,10 +1,10 @@
 //! merges files for multiple targets and preserves first-seen target order.
-//! this demonstrates merge_from_files and mergedaetheldoc::target.
+//! this demonstrates merge_from_files and aethelcorpus::target.
 
 #[path = "common/mod.rs"]
 mod support;
 
-use aethellib::merger::merge_from_files;
+use aethellib::merger::{AethelCorpus, Mixed, merge_from_files};
 use std::error::Error;
 use support::{TempTomlFile, toml_document};
 
@@ -29,8 +29,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         alpha_two.path_str(),
     ];
 
-    // output is one MergedAethelDoc per target, not one per source file.
-    let merged = merge_from_files(&paths, None)?;
+    // output is one AethelCorpus<Mixed> per target, not one per source file.
+    let merged: Vec<AethelCorpus<Mixed>> = merge_from_files(&paths, None)?;
 
     // first seen target is alpha, so alpha is index 0.
     assert_eq!(merged.len(), 2);

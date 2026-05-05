@@ -10,7 +10,7 @@ use sha2::{Digest, Sha256};
 use crate::{
     loader::{AethelDoc, Target, TargetedLoader, error::LoaderError},
     merger::{
-        AethelCorpus, MergeSourceInput, ParsedMergeInput, SourceAethelDoc,
+        AethelCorpus, MergeSourceInput, Mixed, ParsedMergeInput, SourceAethelDoc,
         error::MergerError,
         merger_options::{MergeOptions, MergerOptionError},
     },
@@ -23,7 +23,7 @@ pub fn parse_merge_inputs(paths: &[&str]) -> Result<Vec<ParsedMergeInput>, Merge
     for path in paths {
         let raw =
             fs::read_to_string(path).map_err(|source| LoaderError::read_for_path(path, source))?;
-        let parsed: AethelDoc<toml::Table> =
+        let parsed: AethelDoc<Mixed> =
             toml::from_str(&raw).map_err(|source| LoaderError::parse_for_path(path, source))?;
 
         parsed_inputs.push(ParsedMergeInput {
@@ -40,7 +40,7 @@ pub fn parse_merge_inputs(paths: &[&str]) -> Result<Vec<ParsedMergeInput>, Merge
 pub fn build_raw_corpus_from_sources(
     sources: &[MergeSourceInput<'_>],
     opts: Option<MergeOptions>,
-) -> Result<AethelCorpus<toml::Table>, MergerError> {
+) -> Result<AethelCorpus<Mixed>, MergerError> {
     if sources.is_empty() {
         return Err(MergerError::InvalidInput(
             "at least one path is required for merge".to_string(),
@@ -51,11 +51,11 @@ pub fn build_raw_corpus_from_sources(
 
     let mut seen_source_ids: HashMap<String, usize> = HashMap::new();
     let mut seen_header_names: HashSet<String> = HashSet::new();
-    let mut documents: Vec<SourceAethelDoc<toml::Table>> = Vec::with_capacity(sources.len());
+    let mut documents: Vec<SourceAethelDoc<Mixed>> = Vec::with_capacity(sources.len());
     let mut target: Option<Target> = None;
 
     for source in sources {
-        let parsed: AethelDoc<toml::Table> = toml::from_str(source.raw)
+        let parsed: AethelDoc<Mixed> = toml::from_str(source.raw)
             .map_err(|err| LoaderError::parse_for_path(source.path, err))?;
 
         if let Some(expected_target) = &target {

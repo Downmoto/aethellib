@@ -124,7 +124,7 @@ reference implementation:
 
 ## 7. update existing examples for enum exhaustiveness
 
-when MergedAethelDoc gains a new variant, existing matches in examples may become non-exhaustive.
+when mixed-target examples branch by target, existing matches may become non-exhaustive as new targets are added.
 
 check and update files in:
 - examples/
@@ -176,7 +176,7 @@ all items must be true:
 1. new loader file exists and is exported
 2. merge entrypoint exists in src/merge/mod.rs
 3. merge dispatch handles target without unsupported-target error
-4. MergedAethelDoc includes new variant and accessors
+4. mixed-target corpus conversions via `AethelCorpus<toml::Table>::into_corpus` and `to_corpus` are validated
 5. generator implements Generator trait with new and generate_with_rng
 6. fixture data exists for tests/examples
 7. tests cover parse, merge parity, and deterministic generation

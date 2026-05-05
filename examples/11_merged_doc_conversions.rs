@@ -1,5 +1,5 @@
 //! converts merged untyped documents into typed corpora.
-//! this demonstrates mergedaetheldoc::to_corpus and mergedaetheldoc::into_corpus.
+//! this demonstrates aethelcorpus::to_corpus and aethelcorpus::into_corpus.
 
 #[path = "common/mod.rs"]
 mod support;
