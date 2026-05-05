@@ -44,14 +44,19 @@ pub struct SourceAethelDoc<T> {
     pub data: T,
 }
 
-#[derive(Debug, Clone)]
-/// batch cast output wrapper for source documents.
-pub struct SourceAethelDocs<T>(pub Vec<SourceAethelDoc<T>>);
+impl<T> SourceAethelDoc<T>
+where
+    T: TargetedLoader + serde::Serialize,
+{
+    /// casts one parsed aethel document into one source document.
+    pub fn from_aetheldoc(document: AethelDoc<T>) -> Result<Self, MergerError> {
+        let mut source_documents = cast_aethel_docs_to_sources::<T>(vec![document])?;
+        Ok(source_documents.remove(0))
+    }
 
-impl<T> SourceAethelDocs<T> {
-    /// consumes the wrapper and returns the inner source document vector.
-    pub fn into_vec(self) -> Vec<SourceAethelDoc<T>> {
-        self.0
+    /// casts parsed aethel documents into source documents using merge hash/id rules.
+    pub fn from_aetheldocs(documents: Vec<AethelDoc<T>>) -> Result<Vec<Self>, MergerError> {
+        cast_aethel_docs_to_sources::<T>(documents)
     }
 }
 
@@ -139,31 +144,6 @@ where
     T: TargetedLoader,
 {
     build_corpus_from_paths::<T>(paths, opts)
-}
-
-impl<T> TryFrom<AethelDoc<T>> for SourceAethelDoc<T>
-where
-    T: TargetedLoader + serde::Serialize,
-{
-    type Error = MergerError;
-
-    fn try_from(document: AethelDoc<T>) -> Result<Self, Self::Error> {
-        let mut source_documents = cast_aethel_docs_to_sources::<T>(vec![document])?;
-        Ok(source_documents.remove(0))
-    }
-}
-
-impl<T> TryFrom<Vec<AethelDoc<T>>> for SourceAethelDocs<T>
-where
-    T: TargetedLoader + serde::Serialize,
-{
-    type Error = MergerError;
-
-    fn try_from(documents: Vec<AethelDoc<T>>) -> Result<Self, Self::Error> {
-        Ok(SourceAethelDocs(cast_aethel_docs_to_sources::<T>(
-            documents,
-        )?))
-    }
 }
 
 /// merges a mixed list of toml files into one merged document per discovered target.

@@ -1,5 +1,5 @@
-//! builds a generator from one parsed aethel document via tryfrom casting.
-//! this demonstrates TryFrom<AethelDoc<T>> plus generator::from_documents.
+//! builds a generator from one parsed aethel document via source casting.
+//! this demonstrates SourceAethelDoc::from_aetheldoc plus generator::from_documents.
 
 #[path = "common/mod.rs"]
 mod support;
@@ -23,10 +23,10 @@ primitives = ["ka", "lor"]
 "#,
     ));
 
-    // cast a single AethelDoc into SourceAethelDoc via TryFrom so source id
+    // cast one AethelDoc into SourceAethelDoc so source id
     // and source hash follow the same merge casting rules.
     let loaded = WeaponLoader::from_file(fixture.path_str())?;
-    let source_document: SourceAethelDoc<WeaponLoader> = loaded.try_into()?;
+    let source_document: SourceAethelDoc<WeaponLoader> = SourceAethelDoc::from_aetheldoc(loaded)?;
 
     let generator = WeaponGenerator::from_documents(vec![source_document]);
     let generated = generator.generate();

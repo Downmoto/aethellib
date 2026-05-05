@@ -54,8 +54,8 @@ start with these:
 | merged doc conversion (`MergedAethelDoc::to_corpus`, `MergedAethelDoc::into_corpus`) | [examples/11_merged_doc_conversions.rs](examples/11_merged_doc_conversions.rs) |
 | provenance (`GeneratedField<T>`, `SourceRef`) | [examples/12_weapon_provenance.rs](examples/12_weapon_provenance.rs) |
 | custom target extensibility (`TargetedLoader`, `Generator`) | [examples/13_custom_target.rs](examples/13_custom_target.rs) |
-| parsed aetheldoc casting (`TryFrom<AethelDoc<T>>`, `SourceAethelDoc<T>`) | [examples/14_generator_from_aetheldoc.rs](examples/14_generator_from_aetheldoc.rs) |
-| single parsed aetheldoc cast (`TryFrom<AethelDoc<T>>`, `Generator::from_documents`) | [examples/15_generator_from_aetheldoc_single.rs](examples/15_generator_from_aetheldoc_single.rs) |
+| parsed aetheldoc casting (`SourceAethelDoc::from_aetheldocs`, `SourceAethelDoc<T>`) | [examples/14_generator_from_aetheldoc.rs](examples/14_generator_from_aetheldoc.rs) |
+| single parsed aetheldoc cast (`SourceAethelDoc::from_aetheldoc`, `Generator::from_documents`) | [examples/15_generator_from_aetheldoc_single.rs](examples/15_generator_from_aetheldoc_single.rs) |
 
 ## data format
 
