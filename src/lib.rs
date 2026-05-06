@@ -18,6 +18,7 @@ pub mod merger;
 /// shared test helpers for inline fixtures and temp files.
 pub(crate) mod test_support;
 
+
 /// open target identifier used by loaders, mergers, and generators.
 pub type Target = String;
 
