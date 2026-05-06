@@ -4,8 +4,9 @@
 #[path = "common/mod.rs"]
 mod support;
 
-use aethellib::loader::{
-    AethelDoc, TARGET_PERSON, TARGET_WEAPON, TargetedLoader, error::LoaderError,
+use aethellib::{
+    AethelDoc,
+    loader::{TARGET_PERSON, TARGET_WEAPON, TargetedLoader, error::LoaderError},
 };
 use serde::Deserialize;
 use std::error::Error;

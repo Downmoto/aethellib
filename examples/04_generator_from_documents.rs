@@ -3,10 +3,10 @@
 
 use aethellib::generator::{Generator, generator_weapon::WeaponGenerator};
 use aethellib::loader::{
-    AthelDocHeader, TARGET_WEAPON,
+    TARGET_WEAPON,
     loader_weapon::{WeaponLoader, WeaponNameSection, WeaponTypeSection},
 };
-use aethellib::merger::SourceAethelDoc;
+use aethellib::{AethelDocHeader, SourceAethelDoc};
 
 fn main() {
     // from_documents skips file i/o entirely. this is useful when your caller
@@ -18,7 +18,7 @@ fn main() {
             source_id: "source-a".to_string(),
             source_hash: "hash-a".to_string(),
             source_path: "inline-a.toml".to_string(),
-            header: AthelDocHeader {
+            header: AethelDocHeader {
                 name: "inline set a".to_string(),
                 target: TARGET_WEAPON.to_string(),
                 desc: None,
@@ -43,7 +43,7 @@ fn main() {
             source_id: "source-b".to_string(),
             source_hash: "hash-b".to_string(),
             source_path: "inline-b.toml".to_string(),
-            header: AthelDocHeader {
+            header: AethelDocHeader {
                 name: "inline set b".to_string(),
                 target: TARGET_WEAPON.to_string(),
                 desc: None,

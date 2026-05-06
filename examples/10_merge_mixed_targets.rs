@@ -4,7 +4,10 @@
 #[path = "common/mod.rs"]
 mod support;
 
-use aethellib::merger::{AethelCorpus, Mixed, merge_from_files};
+use aethellib::{
+    AethelCorpus,
+    merger::{Mixed, merge_from_files},
+};
 use std::error::Error;
 use support::{TempTomlFile, toml_document};
 

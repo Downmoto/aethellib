@@ -4,9 +4,9 @@
 #[path = "common/mod.rs"]
 mod support;
 
+use aethellib::SourceAethelDoc;
 use aethellib::generator::{Generator, generator_weapon::WeaponGenerator};
 use aethellib::loader::{TargetedLoader, loader_weapon::WeaponLoader};
-use aethellib::merger::SourceAethelDoc;
 use std::error::Error;
 use support::{TempTomlFile, weapon_document};
 

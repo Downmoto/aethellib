@@ -4,8 +4,8 @@ use rand::{Rng, seq::SliceRandom};
 use std::collections::HashMap;
 
 use crate::{
+    SourceAethelDoc,
     generator::{GeneratedField, SourceRef},
-    merger::SourceAethelDoc,
 };
 
 pub(crate) type StringCandidate = GeneratedField<String>;

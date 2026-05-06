@@ -4,12 +4,14 @@ use std::fmt;
 
 use rand::Rng;
 
-use crate::generator::{
-    GeneratedField, Generator, SourceRef,
-    utils::{StringCandidate, build_pool, choose_candidate, extend_unique_source_refs},
-};
 use crate::loader::loader_weapon::WeaponLoader;
-use crate::merger::{AethelCorpus, SourceAethelDoc};
+use crate::{
+    AethelCorpus, SourceAethelDoc,
+    generator::{
+        GeneratedField, Generator, SourceRef,
+        utils::{StringCandidate, build_pool, choose_candidate, extend_unique_source_refs},
+    },
+};
 
 #[derive(Debug)]
 /// generated weapon payload containing assembled fields.
@@ -337,7 +339,7 @@ fn build_visuals(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::loader::AthelDocHeader;
+    use crate::AethelDocHeader;
     use crate::loader::TARGET_WEAPON;
     use crate::loader::loader_weapon::{
         WeaponLoreSection, WeaponNameSection, WeaponQualitiesSection, WeaponTypeSection,
@@ -355,7 +357,7 @@ mod tests {
             source_id: source_id.to_string(),
             source_hash: format!("hash-{source_id}"),
             source_path: format!("{source_id}.toml"),
-            header: AthelDocHeader {
+            header: AethelDocHeader {
                 name: name.to_string(),
                 target: TARGET_WEAPON.to_string(),
                 desc: None,

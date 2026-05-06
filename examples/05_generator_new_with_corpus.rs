@@ -3,10 +3,10 @@
 
 use aethellib::generator::{Generator, generator_weapon::WeaponGenerator};
 use aethellib::loader::{
-    AthelDocHeader, TARGET_WEAPON,
+    TARGET_WEAPON,
     loader_weapon::{WeaponLoader, WeaponNameSection},
 };
-use aethellib::merger::{AethelCorpus, SourceAethelDoc};
+use aethellib::{AethelCorpus, AethelDocHeader, SourceAethelDoc};
 
 fn main() {
     // new is the lowest-level constructor. you provide a fully shaped corpus,
@@ -17,7 +17,7 @@ fn main() {
             source_id: "manual-source".to_string(),
             source_hash: "manual-hash".to_string(),
             source_path: "manual.toml".to_string(),
-            header: AthelDocHeader {
+            header: AethelDocHeader {
                 name: "manual corpus".to_string(),
                 target: TARGET_WEAPON.to_string(),
                 desc: Some("built directly in code".to_string()),

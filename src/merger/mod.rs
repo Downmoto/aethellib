@@ -2,27 +2,27 @@
 
 pub mod error;
 pub mod merger_options;
-pub(self) mod utils;
+pub(crate) mod utils;
 
 use std::collections::HashMap;
 
-use crate::loader::{AethelDoc, AthelDocHeader, Target, TargetedLoader, error::LoaderError};
+use crate::loader::TargetedLoader;
 use crate::merger::error::MergerError;
 use crate::merger::utils::{
-    build_corpus_from_paths, build_raw_corpus_from_sources, cast_aethel_docs_to_sources,
-    parse_merge_inputs,
+    build_corpus_from_paths, build_raw_corpus_from_sources, parse_merge_inputs,
 };
+use crate::{AethelCorpus, Target};
 use merger_options::MergeOptions;
 
 /// parsed source used by merge dispatch before target-specific ingestion.
-struct ParsedMergeInput {
+pub(crate) struct ParsedMergeInput {
     path: String,
     raw: String,
     target: Target,
 }
 
 /// source payload used by target-specific corpus builders.
-struct MergeSourceInput<'a> {
+pub(crate) struct MergeSourceInput<'a> {
     /// original source path used for loading.
     pub path: &'a str,
     /// raw source content used for parsing and hashing.
@@ -31,98 +31,6 @@ struct MergeSourceInput<'a> {
 
 /// untyped merged document body used for mixed-target merge flows.
 pub type Mixed = toml::Table;
-
-#[derive(Debug, Clone)]
-/// one source document retained in a target corpus.
-pub struct SourceAethelDoc<T> {
-    /// unique id for this source within a corpus instance.
-    pub source_id: String,
-    /// deterministic hash derived from canonicalized document content and target.
-    pub source_hash: String,
-    /// original source path used for loading.
-    pub source_path: String,
-    /// metadata from the source header.
-    pub header: AthelDocHeader,
-    /// source data body.
-    pub data: T,
-}
-
-impl<T> SourceAethelDoc<T>
-where
-    T: TargetedLoader + serde::Serialize,
-{
-    /// casts one parsed aethel document into one source document.
-    pub fn from_aetheldoc(document: AethelDoc<T>) -> Result<Self, MergerError> {
-        let mut source_documents = cast_aethel_docs_to_sources::<T>(vec![document])?;
-        Ok(source_documents.remove(0))
-    }
-
-    /// casts parsed aethel documents into source documents using merge hash/id rules.
-    pub fn from_aetheldocs(documents: Vec<AethelDoc<T>>) -> Result<Vec<Self>, MergerError> {
-        cast_aethel_docs_to_sources::<T>(documents)
-    }
-}
-
-#[derive(Debug, Clone)]
-/// per-target corpus retaining all source documents and metadata.
-pub struct AethelCorpus<T> {
-    /// target represented by all source documents.
-    pub target: Target,
-    /// source documents in first-seen order.
-    pub documents: Vec<SourceAethelDoc<T>>,
-}
-
-impl<T> AethelCorpus<T> {
-    /// returns the target represented by this corpus.
-    pub fn target(&self) -> &str {
-        self.target.as_str()
-    }
-}
-
-impl AethelCorpus<Mixed> {
-    /// consumes this value and converts source tables into a typed corpus.
-    pub fn into_corpus<T>(self) -> Result<AethelCorpus<T>, MergerError>
-    where
-        T: TargetedLoader,
-    {
-        if self.target != T::TARGET {
-            return Err(LoaderError::TargetMismatch {
-                expected: T::TARGET.to_string(),
-                found: self.target,
-            }
-            .into());
-        }
-
-        let mut documents: Vec<SourceAethelDoc<T>> = Vec::with_capacity(self.documents.len());
-
-        for source in self.documents {
-            let data: T = toml::Value::Table(source.data)
-                .try_into()
-                .map_err(|err| LoaderError::parse_for_path(source.source_path.as_str(), err))?;
-
-            documents.push(SourceAethelDoc {
-                source_id: source.source_id,
-                source_hash: source.source_hash,
-                source_path: source.source_path,
-                header: source.header,
-                data,
-            });
-        }
-
-        Ok(AethelCorpus {
-            target: T::TARGET.to_string(),
-            documents,
-        })
-    }
-
-    /// clones and converts source tables into a typed corpus.
-    pub fn to_corpus<T>(&self) -> Result<AethelCorpus<T>, MergerError>
-    where
-        T: TargetedLoader,
-    {
-        self.clone().into_corpus::<T>()
-    }
-}
 
 /// assembles a corpus for any loader that implements `TargetedLoader`.
 pub fn merge_target_files<T>(
@@ -183,7 +91,7 @@ pub fn merge_from_files(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::loader::{TARGET_PERSON, TARGET_WEAPON};
+    use crate::loader::{TARGET_PERSON, TARGET_WEAPON, error::LoaderError};
     use crate::merger::utils::build_corpus_from_sources;
     use crate::test_support::{TempTomlFile, person_document, weapon_document};
     use serde::Deserialize;

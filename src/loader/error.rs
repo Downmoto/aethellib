@@ -2,7 +2,7 @@
 
 use std::{fmt, path::Path};
 
-use crate::loader::Target;
+use crate::Target;
 
 #[derive(Debug)]
 /// errors that can happen while loading and validating a toml file.

@@ -4,9 +4,9 @@
 #[path = "common/mod.rs"]
 mod support;
 
+use aethellib::AethelCorpus;
 use aethellib::generator::{GeneratedField, Generator};
 use aethellib::loader::TargetedLoader;
-use aethellib::merger::AethelCorpus;
 use rand::{Rng, seq::SliceRandom};
 use serde::Deserialize;
 use std::error::Error;

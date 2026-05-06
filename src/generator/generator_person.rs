@@ -2,12 +2,14 @@
 
 use rand::Rng;
 
-use crate::generator::{
-    GeneratedField, Generator, SourceRef,
-    utils::{StringCandidate, build_pool, choose_candidate, extend_unique_source_refs},
-};
 use crate::loader::loader_person::PersonLoader;
-use crate::merger::{AethelCorpus, SourceAethelDoc};
+use crate::{
+    AethelCorpus, SourceAethelDoc,
+    generator::{
+        GeneratedField, Generator, SourceRef,
+        utils::{StringCandidate, build_pool, choose_candidate, extend_unique_source_refs},
+    },
+};
 
 #[derive(Debug)]
 /// generated person payload containing assembled fields.
@@ -133,7 +135,8 @@ fn build_primitive_segment(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::loader::{AthelDocHeader, TARGET_PERSON};
+    use crate::AethelDocHeader;
+    use crate::loader::TARGET_PERSON;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
 
@@ -148,7 +151,7 @@ mod tests {
             source_id: source_id.to_string(),
             source_hash: format!("hash-{source_id}"),
             source_path: format!("{source_id}.toml"),
-            header: AthelDocHeader {
+            header: AethelDocHeader {
                 name: name.to_string(),
                 target: TARGET_PERSON.to_string(),
                 desc: None,

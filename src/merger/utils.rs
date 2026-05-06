@@ -8,16 +8,17 @@ use std::{
 use sha2::{Digest, Sha256};
 
 use crate::{
-    loader::{AethelDoc, Target, TargetedLoader, error::LoaderError},
+    AethelCorpus, AethelDoc, SourceAethelDoc, Target,
+    loader::{TargetedLoader, error::LoaderError},
     merger::{
-        AethelCorpus, MergeSourceInput, Mixed, ParsedMergeInput, SourceAethelDoc,
+        MergeSourceInput, Mixed, ParsedMergeInput,
         error::MergerError,
         merger_options::{MergeOptions, MergerOptionError},
     },
 };
 
 /// parses source files once so dispatch and target ingestion share the same payload.
-pub fn parse_merge_inputs(paths: &[&str]) -> Result<Vec<ParsedMergeInput>, MergerError> {
+pub(crate) fn parse_merge_inputs(paths: &[&str]) -> Result<Vec<ParsedMergeInput>, MergerError> {
     let mut parsed_inputs = Vec::with_capacity(paths.len());
 
     for path in paths {
@@ -188,7 +189,7 @@ where
 }
 
 /// casts parsed aethel documents into source documents using merge hash/id rules.
-pub fn cast_aethel_docs_to_sources<T>(
+pub(crate) fn cast_aethel_docs_to_sources<T>(
     documents: Vec<AethelDoc<T>>,
 ) -> Result<Vec<SourceAethelDoc<T>>, MergerError>
 where

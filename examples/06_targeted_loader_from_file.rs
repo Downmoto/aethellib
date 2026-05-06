@@ -4,7 +4,10 @@
 #[path = "common/mod.rs"]
 mod support;
 
-use aethellib::loader::{TARGET_WEAPON, Target, TargetedLoader, loader_weapon::WeaponLoader};
+use aethellib::{
+    Target,
+    loader::{TARGET_WEAPON, TargetedLoader, loader_weapon::WeaponLoader},
+};
 use std::error::Error;
 use support::{TempTomlFile, weapon_document};
 

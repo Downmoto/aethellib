@@ -6,44 +6,18 @@ pub mod loader_person;
 #[cfg(feature = "weapon-gen")]
 pub mod loader_weapon;
 
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::de::DeserializeOwned;
 use std::fs;
 use std::path::Path;
 
+use crate::AethelDoc;
 use crate::loader::error::LoaderError;
-
-/// open target identifier used by loaders, mergers, and generators.
-pub type Target = String;
 
 /// built-in target id for weapon schemas.
 pub const TARGET_WEAPON: &str = "weapon";
 /// built-in target id for person schemas.
 pub const TARGET_PERSON: &str = "person";
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-/// common metadata required in each input file header.
-pub struct AthelDocHeader {
-    /// dataset display name.
-    pub name: String,
-    /// target category used for loader validation.
-    pub target: Target,
-    /// optional dataset description.
-    pub desc: Option<String>,
-    /// optional dataset author.
-    pub author: Option<String>,
-    /// optional dataset version.
-    pub version: Option<String>,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-/// parsed toml payload with header plus target-specific body data.
-pub struct AethelDoc<T> {
-    /// parsed file header.
-    pub header: AthelDocHeader,
-    /// target-specific sections flattened from the same root document.
-    #[serde(flatten)]
-    pub data: T,
-}
 pub trait TargetedLoader: Sized + DeserializeOwned {
     /// expected target for this loader implementation.
     const TARGET: &'static str;

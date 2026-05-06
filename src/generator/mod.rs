@@ -15,9 +15,11 @@ pub(self) mod utils;
 use rand::Rng;
 use rand::thread_rng;
 
+use crate::AethelCorpus;
+use crate::SourceAethelDoc;
 use crate::loader::TargetedLoader;
+use crate::merger::error::MergerError;
 use crate::merger::merge_target_files;
-use crate::merger::{AethelCorpus, SourceAethelDoc, error::MergerError};
 
 /// generic generator contract with shared constructor and generation helpers.
 pub trait Generator: Sized {
