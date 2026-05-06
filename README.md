@@ -15,6 +15,12 @@ it currently supports:
 - deterministic generation support through `generate_with_rng(...)`
 - target-extensible architecture for loaders, merge variants, and generators
 
+## feature flags
+
+- default feature set is `built-in`, which enables both `weapon-gen` and `person-gen`
+- built-in loader/generator modules are feature-gated in `src/loader/mod.rs` and `src/generator/mod.rs`
+- if you use `--no-default-features`, enable required target features explicitly
+
 ## installation
 
 add this crate to your `Cargo.toml`:
@@ -116,7 +122,7 @@ cargo run --example 15_generator_from_aetheldoc_single --features weapon-gen
 use the exact target authoring guide:
 - [docs/adding-new-target.md](docs/adding-new-target.md)
 
-that document covers loader wiring, merge variant/accessors, generator trait implementation, fixtures, tests, and validation commands.
+that document covers loader wiring, feature/module exports, merge conversion helpers (`merge_from_files`, `to_corpus`, `into_corpus`), generator trait implementation, fixtures, tests, and validation commands.
 
 ## development
 
