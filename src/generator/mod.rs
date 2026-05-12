@@ -5,12 +5,6 @@
 //! generators should expose a convenience `generate()` method and
 //! a deterministic `generate_with_rng(...)` method for reproducible tests.
 
-#[cfg(feature = "person-gen")]
-pub mod generator_person;
-#[cfg(feature = "weapon-gen")]
-pub mod generator_weapon;
-#[cfg(any(feature = "person-gen", feature = "weapon-gen"))]
-pub(self) mod utils;
 
 use rand::Rng;
 use rand::thread_rng;
