@@ -2,7 +2,7 @@
 
 use std::error::Error;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use aethellib::generator::Generator;
@@ -14,6 +14,26 @@ use aethellib::{AethelCorpus, AethelDoc, AethelDocHeader, SourceAethelDoc, Targe
 use rand::Rng;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
+
+struct FixtureDirGuard {
+    path: PathBuf,
+}
+
+impl FixtureDirGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path }
+    }
+
+    fn path(&self) -> &Path {
+        self.path.as_path()
+    }
+}
+
+impl Drop for FixtureDirGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(self.path.as_path());
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct ExampleLoader {
@@ -54,13 +74,13 @@ impl Generator for ExampleGenerator {
 }
 
 #[allow(deprecated)]
-fn merge_with_legacy_alias(paths: &[&str]) -> Result<AethelCorpus<ExampleLoader>, MergerError> {
+fn merge_with_legacy_alias(paths: &[impl AsRef<Path>]) -> Result<AethelCorpus<ExampleLoader>, MergerError> {
     aethellib::merger::merge_target_files::<ExampleLoader>(paths, None)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let fixture_dir = make_fixture_dir(&workspace_root)?;
+    let fixture_dir = FixtureDirGuard::new(make_fixture_dir(workspace_root.as_path())?);
 
     let raw_alpha = build_doc_raw("alpha set", "example", &["oak", "ash", "elm"]);
     let raw_beta = build_doc_raw("beta set", "example", &["birch", "cedar"]);
@@ -68,11 +88,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let raw_dup_one = build_doc_raw("duplicate", "example", &["left"]);
     let raw_dup_two = build_doc_raw("duplicate", "example", &["right"]);
 
-    let alpha_path = write_fixture(&fixture_dir, "alpha.toml", &raw_alpha)?;
-    let beta_path = write_fixture(&fixture_dir, "beta.toml", &raw_beta)?;
-    let person_path = write_fixture(&fixture_dir, "person.toml", &raw_person)?;
-    let dup_one_path = write_fixture(&fixture_dir, "dup_one.toml", &raw_dup_one)?;
-    let dup_two_path = write_fixture(&fixture_dir, "dup_two.toml", &raw_dup_two)?;
+    let alpha_path = write_fixture(fixture_dir.path(), "alpha.toml", &raw_alpha)?;
+    let beta_path = write_fixture(fixture_dir.path(), "beta.toml", &raw_beta)?;
+    let person_path = write_fixture(fixture_dir.path(), "person.toml", &raw_person)?;
+    let dup_one_path = write_fixture(fixture_dir.path(), "dup_one.toml", &raw_dup_one)?;
+    let dup_two_path = write_fixture(fixture_dir.path(), "dup_two.toml", &raw_dup_two)?;
 
     let parsed_inline = ExampleLoader::from_str("inline-alpha", &raw_alpha)?;
     assert_eq!(parsed_inline.header.target, ExampleLoader::TARGET);
@@ -81,7 +101,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let parsed_file = ExampleLoader::from_file(&alpha_path)?;
     assert_eq!(parsed_file.header.title, "alpha set");
 
-    let merge_paths = vec![alpha_path.as_str(), beta_path.as_str()];
+    let merge_paths = vec![alpha_path.clone(), beta_path.clone()];
     let corpus = merge_files::<ExampleLoader>(&merge_paths, None)?;
     assert_eq!(corpus.target(), "example");
     assert_eq!(corpus.documents.len(), 2);
@@ -90,9 +110,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert_eq!(corpus_legacy.documents.len(), 2);
 
     let strict_opts = MergeOptions {
-        identical_names_allowed: false,
+        identical_title_allowed: false,
     };
-    let dup_paths = vec![dup_one_path.as_str(), dup_two_path.as_str()];
+    let dup_paths = vec![dup_one_path, dup_two_path];
     let dup_result = merge_files::<ExampleLoader>(&dup_paths, Some(strict_opts));
     assert!(dup_result.is_err());
 
@@ -154,7 +174,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn make_fixture_dir(workspace_root: &PathBuf) -> Result<PathBuf, Box<dyn Error>> {
+fn make_fixture_dir(workspace_root: &Path) -> Result<PathBuf, Box<dyn Error>> {
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
     let dir = workspace_root
         .join("target")
@@ -164,7 +184,7 @@ fn make_fixture_dir(workspace_root: &PathBuf) -> Result<PathBuf, Box<dyn Error>>
     Ok(dir)
 }
 
-fn write_fixture(dir: &PathBuf, file_name: &str, raw: &str) -> Result<String, Box<dyn Error>> {
+fn write_fixture(dir: &Path, file_name: &str, raw: &str) -> Result<String, Box<dyn Error>> {
     let path = dir.join(file_name);
     fs::write(&path, raw)?;
     Ok(path.to_string_lossy().to_string())

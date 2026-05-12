@@ -3,6 +3,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
+    path::Path,
 };
 
 use sha2::{Digest, Sha256};
@@ -19,7 +20,7 @@ use crate::{
 
 /// loads and validates source files for one target, then assembles a corpus.
 pub fn build_corpus_from_paths<T>(
-    paths: &[&str],
+    paths: &[impl AsRef<Path>],
     opts: Option<MergeOptions>,
 ) -> Result<AethelCorpus<T>, MergerError>
 where
@@ -34,9 +35,10 @@ where
     let mut sources: Vec<(String, String)> = Vec::with_capacity(paths.len());
 
     for path in paths {
-        let raw =
-            fs::read_to_string(path).map_err(|source| LoaderError::read_for_path(path, source))?;
-        sources.push(((*path).to_string(), raw));
+        let path_ref = path.as_ref();
+        let raw = fs::read_to_string(path_ref)
+            .map_err(|source| LoaderError::read_for_path(path_ref, source))?;
+        sources.push((path_ref.to_string_lossy().to_string(), raw));
     }
 
     let source_refs: Vec<MergeSourceInput<'_>> = sources
@@ -73,7 +75,7 @@ where
     for source in sources {
         let parsed = T::from_str(source.path, source.raw)?;
 
-        if !options.identical_names_allowed && !seen_header_names.insert(parsed.header.title.clone())
+        if !options.identical_title_allowed && !seen_header_names.insert(parsed.header.title.clone())
         {
             return Err(MergerOptionError::IdenticalNameAllowed {
                 header: parsed.header.title,

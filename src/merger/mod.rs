@@ -4,6 +4,8 @@ pub mod error;
 pub mod merger_options;
 pub(crate) mod utils;
 
+use std::path::Path;
+
 use crate::loader::TargetedLoader;
 use crate::merger::error::MergerError;
 use crate::merger::utils::build_corpus_from_paths;
@@ -20,7 +22,7 @@ pub(crate) struct MergeSourceInput<'a> {
 
 /// merges one target file set into one typed corpus.
 pub fn merge_files<T>(
-    paths: &[&str],
+    paths: &[impl AsRef<Path>],
     opts: Option<MergeOptions>,
 ) -> Result<AethelCorpus<T>, MergerError>
 where
@@ -35,7 +37,7 @@ where
 )]
 /// compatibility alias for the previous merge api.
 pub fn merge_target_files<T>(
-    paths: &[&str],
+    paths: &[impl AsRef<Path>],
     opts: Option<MergeOptions>,
 ) -> Result<AethelCorpus<T>, MergerError>
 where

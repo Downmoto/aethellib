@@ -5,6 +5,7 @@
 //! generators should expose a convenience `generate()` method and
 //! a deterministic `generate_with_rng(...)` method for reproducible tests.
 
+use std::path::Path;
 
 use rand::Rng;
 use rand::thread_rng;
@@ -37,13 +38,14 @@ pub trait Generator: Sized {
     }
 
     /// loads one target file and creates a corpus-backed generator.
-    fn from_file(path: &str) -> Result<Self, MergerError> {
-        let corpus = merge_files::<Self::Loader>(&[path], None)?;
+    fn from_file(path: impl AsRef<Path>) -> Result<Self, MergerError> {
+        let paths = [path];
+        let corpus = merge_files::<Self::Loader>(&paths, None)?;
         Ok(Self::new(corpus))
     }
 
     /// loads target files and creates a corpus-backed generator.
-    fn from_files(paths: &[&str]) -> Result<Self, MergerError> {
+    fn from_files(paths: &[impl AsRef<Path>]) -> Result<Self, MergerError> {
         let corpus = merge_files::<Self::Loader>(paths, None)?;
         Ok(Self::new(corpus))
     }
