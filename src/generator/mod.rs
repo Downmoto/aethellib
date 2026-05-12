@@ -13,7 +13,7 @@ use crate::AethelCorpus;
 use crate::SourceAethelDoc;
 use crate::loader::TargetedLoader;
 use crate::merger::error::MergerError;
-use crate::merger::merge_target_files;
+use crate::merger::merge_files;
 
 /// generic generator contract with shared constructor and generation helpers.
 pub trait Generator: Sized {
@@ -38,7 +38,13 @@ pub trait Generator: Sized {
 
     /// loads one target file and creates a corpus-backed generator.
     fn from_file(path: &str) -> Result<Self, MergerError> {
-        let corpus = merge_target_files::<Self::Loader>(&[path], None)?;
+        let corpus = merge_files::<Self::Loader>(&[path], None)?;
+        Ok(Self::new(corpus))
+    }
+
+    /// loads target files and creates a corpus-backed generator.
+    fn from_files(paths: &[&str]) -> Result<Self, MergerError> {
+        let corpus = merge_files::<Self::Loader>(paths, None)?;
         Ok(Self::new(corpus))
     }
 

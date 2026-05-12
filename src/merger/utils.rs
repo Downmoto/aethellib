@@ -8,94 +8,14 @@ use std::{
 use sha2::{Digest, Sha256};
 
 use crate::{
-    AethelCorpus, AethelDoc, SourceAethelDoc, Target,
+    AethelCorpus, AethelDoc, SourceAethelDoc,
     loader::{TargetedLoader, error::LoaderError},
     merger::{
-        MergeSourceInput, Mixed, ParsedMergeInput,
+        MergeSourceInput,
         error::MergerError,
         merger_options::{MergeOptions, MergerOptionError},
     },
 };
-
-/// parses source files once so dispatch and target ingestion share the same payload.
-pub(crate) fn parse_merge_inputs(paths: &[&str]) -> Result<Vec<ParsedMergeInput>, MergerError> {
-    let mut parsed_inputs = Vec::with_capacity(paths.len());
-
-    for path in paths {
-        let raw =
-            fs::read_to_string(path).map_err(|source| LoaderError::read_for_path(path, source))?;
-        let parsed: AethelDoc<Mixed> =
-            toml::from_str(&raw).map_err(|source| LoaderError::parse_for_path(path, source))?;
-
-        parsed_inputs.push(ParsedMergeInput {
-            path: (*path).to_string(),
-            raw,
-            target: parsed.header.target,
-        });
-    }
-
-    Ok(parsed_inputs)
-}
-
-/// assembles an untyped target corpus from already-loaded source payloads.
-pub fn build_raw_corpus_from_sources(
-    sources: &[MergeSourceInput<'_>],
-    opts: Option<MergeOptions>,
-) -> Result<AethelCorpus<Mixed>, MergerError> {
-    if sources.is_empty() {
-        return Err(MergerError::InvalidInput(
-            "at least one path is required for merge".to_string(),
-        ));
-    }
-
-    let options = opts.unwrap_or_default();
-
-    let mut seen_source_ids: HashMap<String, usize> = HashMap::new();
-    let mut seen_header_names: HashSet<String> = HashSet::new();
-    let mut documents: Vec<SourceAethelDoc<Mixed>> = Vec::with_capacity(sources.len());
-    let mut target: Option<Target> = None;
-
-    for source in sources {
-        let parsed: AethelDoc<Mixed> = toml::from_str(source.raw)
-            .map_err(|err| LoaderError::parse_for_path(source.path, err))?;
-
-        if let Some(expected_target) = &target {
-            if parsed.header.target != *expected_target {
-                return Err(LoaderError::TargetMismatch {
-                    expected: expected_target.clone(),
-                    found: parsed.header.target.clone(),
-                }
-                .into());
-            }
-        } else {
-            target = Some(parsed.header.target.clone());
-        }
-
-        if !options.identical_names_allowed && !seen_header_names.insert(parsed.header.name.clone())
-        {
-            return Err(MergerOptionError::IdenticalNameAllowed {
-                header: parsed.header.name,
-            }
-            .into());
-        }
-
-        let source_hash = hash_source_content(parsed.header.target.as_str(), source.raw);
-        let source_id = make_unique_source_id(&source_hash, &mut seen_source_ids);
-
-        documents.push(SourceAethelDoc {
-            source_id,
-            source_hash,
-            source_path: source.path.to_string(),
-            header: parsed.header,
-            data: parsed.data,
-        });
-    }
-
-    Ok(AethelCorpus {
-        target: target.unwrap_or_default(),
-        documents,
-    })
-}
 
 /// loads and validates source files for one target, then assembles a corpus.
 pub fn build_corpus_from_paths<T>(
@@ -151,21 +71,12 @@ where
     let mut documents: Vec<SourceAethelDoc<T>> = Vec::with_capacity(sources.len());
 
     for source in sources {
-        let parsed: AethelDoc<T> = toml::from_str(source.raw)
-            .map_err(|err| LoaderError::parse_for_path(source.path, err))?;
+        let parsed = T::from_str(source.path, source.raw)?;
 
-        if parsed.header.target != T::TARGET {
-            return Err(LoaderError::TargetMismatch {
-                expected: T::TARGET.to_string(),
-                found: parsed.header.target.clone(),
-            }
-            .into());
-        }
-
-        if !options.identical_names_allowed && !seen_header_names.insert(parsed.header.name.clone())
+        if !options.identical_names_allowed && !seen_header_names.insert(parsed.header.title.clone())
         {
             return Err(MergerOptionError::IdenticalNameAllowed {
-                header: parsed.header.name,
+                header: parsed.header.title,
             }
             .into());
         }

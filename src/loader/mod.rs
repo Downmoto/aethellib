@@ -13,13 +13,11 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
     /// expected target for this loader implementation.
     const TARGET: &'static str;
 
-    /// load, parse, and target-validate a single toml file.
-    fn from_file(path: impl AsRef<Path>) -> Result<AethelDoc<Self>, LoaderError> {
+    /// parse and target-validate one toml payload.
+    fn from_str(path: impl AsRef<Path>, raw: &str) -> Result<AethelDoc<Self>, LoaderError> {
         let path_ref = path.as_ref();
-        let raw = fs::read_to_string(path_ref)
-            .map_err(|source| LoaderError::read_for_path(path_ref, source))?;
-        let parsed: AethelDoc<Self> =
-            toml::from_str(&raw).map_err(|source| LoaderError::parse_for_path(path_ref, source))?;
+        let parsed: AethelDoc<Self> = toml::from_str(raw)
+            .map_err(|source| LoaderError::parse_for_path(path_ref, source))?;
 
         if parsed.header.target != Self::TARGET {
             return Err(LoaderError::TargetMismatch {
@@ -29,5 +27,13 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
         }
 
         Ok(parsed)
+    }
+
+    /// load, parse, and target-validate a single toml file.
+    fn from_file(path: impl AsRef<Path>) -> Result<AethelDoc<Self>, LoaderError> {
+        let path_ref = path.as_ref();
+        let raw = fs::read_to_string(path_ref)
+            .map_err(|source| LoaderError::read_for_path(path_ref, source))?;
+        Self::from_str(path_ref, raw.as_str())
     }
 }
