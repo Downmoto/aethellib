@@ -1,6 +1,6 @@
 [package]
 name = "aethellib"
-version = "0.2.0"
+version = "0.3.1"
 edition = "2024"
 
 [dependencies]
@@ -9,70 +9,3 @@ toml = "1.1.2"
 rand = "0.8.5"
 tracing = "0.1.44"
 sha2 = "0.10.9"
-
-
-[features]
-# enable built-in generators by default
-default = ["built-in"]
-
-# enables all generator features
-built-in = ["weapon-gen", "person-gen"]
-
-# generator features
-weapon-gen = []
-person-gen = []
-
-[[example]]
-name = "01_weapon_from_file"
-required-features = ["weapon-gen"]
-
-[[example]]
-name = "02_person_from_file"
-required-features = ["person-gen"]
-
-[[example]]
-name = "03_weapon_deterministic_rng"
-required-features = ["weapon-gen"]
-
-[[example]]
-name = "04_generator_from_documents"
-required-features = ["weapon-gen"]
-
-[[example]]
-name = "05_generator_new_with_corpus"
-required-features = ["weapon-gen"]
-
-[[example]]
-name = "06_targeted_loader_from_file"
-required-features = ["weapon-gen"]
-
-[[example]]
-name = "07_loader_error_handling"
-
-[[example]]
-name = "08_merge_target_files"
-required-features = ["weapon-gen"]
-
-[[example]]
-name = "09_merge_with_options"
-
-[[example]]
-name = "10_merge_mixed_targets"
-
-[[example]]
-name = "11_merged_doc_conversions"
-
-[[example]]
-name = "12_weapon_provenance"
-required-features = ["weapon-gen"]
-
-[[example]]
-name = "13_custom_target"
-
-[[example]]
-name = "14_generator_from_aetheldoc"
-required-features = ["weapon-gen"]
-
-[[example]]
-name = "15_generator_from_aetheldoc_single"
-required-features = ["weapon-gen"]

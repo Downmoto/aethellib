@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    loader::{TargetedLoader, error::LoaderError},
-    merger::{Mixed, error::MergerError, utils::cast_aethel_docs_to_sources},
+    loader::TargetedLoader,
+    merger::{error::MergerError, utils::cast_aethel_docs_to_sources},
 };
 
 /// generation module entrypoint.
@@ -14,10 +14,6 @@ pub mod loader;
 /// merge module entrypoint.
 pub mod merger;
 
-#[cfg(test)]
-/// shared test helpers for inline fixtures and temp files.
-pub(crate) mod test_support;
-
 
 /// open target identifier used by loaders, mergers, and generators.
 pub type Target = String;
@@ -26,7 +22,7 @@ pub type Target = String;
 /// common metadata required in each input file header.
 pub struct AethelDocHeader {
     /// dataset display name.
-    pub name: String,
+    pub title: String,
     /// target category used for loader validation.
     pub target: Target,
     /// optional dataset description.
@@ -37,7 +33,7 @@ pub struct AethelDocHeader {
     pub version: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// parsed toml payload with header plus target-specific body data.
 pub struct AethelDoc<T> {
     /// parsed file header.
@@ -91,50 +87,5 @@ impl<T> AethelCorpus<T> {
     /// returns the target represented by this corpus.
     pub fn target(&self) -> &str {
         self.target.as_str()
-    }
-}
-
-impl AethelCorpus<Mixed> {
-    /// consumes this value and converts source tables into a typed corpus.
-    pub fn into_corpus<T>(self) -> Result<AethelCorpus<T>, MergerError>
-    where
-        T: TargetedLoader,
-    {
-        if self.target != T::TARGET {
-            return Err(LoaderError::TargetMismatch {
-                expected: T::TARGET.to_string(),
-                found: self.target,
-            }
-            .into());
-        }
-
-        let mut documents: Vec<SourceAethelDoc<T>> = Vec::with_capacity(self.documents.len());
-
-        for source in self.documents {
-            let data: T = toml::Value::Table(source.data)
-                .try_into()
-                .map_err(|err| LoaderError::parse_for_path(source.source_path.as_str(), err))?;
-
-            documents.push(SourceAethelDoc {
-                source_id: source.source_id,
-                source_hash: source.source_hash,
-                source_path: source.source_path,
-                header: source.header,
-                data,
-            });
-        }
-
-        Ok(AethelCorpus {
-            target: T::TARGET.to_string(),
-            documents,
-        })
-    }
-
-    /// clones and converts source tables into a typed corpus.
-    pub fn to_corpus<T>(&self) -> Result<AethelCorpus<T>, MergerError>
-    where
-        T: TargetedLoader,
-    {
-        self.clone().into_corpus::<T>()
     }
 }

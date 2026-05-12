@@ -9,3 +9,11 @@ version = "0.1"
 first = ["al", "ra", "jo", "el"]
 middle = ["an", "is", "or"]
 last = ["ton", "ric", "den", "vale"]
+
+
+[rules]
+name = { rule = "scramble", combine = [
+    "first",
+    "middle",
+    "last",
+], chance = { first = 100, middle = 30, last = 90 } }
