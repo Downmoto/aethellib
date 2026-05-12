@@ -483,6 +483,65 @@ commit message suggestion:
 
 `docs(provenance): define automatic provenance guarantees and migration path`
 
+### provenance guarantees and migration guidance
+
+this section documents the supported provenance behaviours after slots `1` through `5`.
+
+#### guaranteed automatic provenance path
+
+provenance is guaranteed to be automatically attached when generation follows this path:
+
+1. collect candidates with `collect_generated_field_candidates(...)`
+2. keep provenance state in `GeneratedFieldCandidates<T>` or `ProvenanceCandidateIndex<T>`
+3. produce output via helper samplers:
+- `sample_generated_field(...)`
+- `choose_generated_field(...)`
+- `GeneratedFieldCandidates::sample_with_rng(...)`
+
+if these helpers are used, `GeneratedField<T>` contains source refs without manual ref assembly loops.
+
+#### optional provenance-first trait guidance
+
+for generators that always return provenance-aware output, use:
+
+- `ProvenanceGenerator`
+
+recommended pattern:
+
+- implement `Generator<Output = GeneratedField<T>>`
+- implement `ProvenanceGenerator<Value = T>` for the same type
+
+this gives users a semantic signal and convenience methods (`generate_field`, `generate_field_with_rng`) without breaking legacy `Generator` implementations.
+
+#### manual path behaviour
+
+if users bypass helper collection/sampling and build outputs manually, provenance remains user-managed.
+
+in that mode, aethellib does not infer source refs automatically because it cannot observe custom generation transformations inside user code.
+
+#### migration notes for existing generators
+
+minimal migration path from manual provenance wiring:
+
+1. replace hand-built value/ref maps with `collect_generated_field_candidates(...)`
+2. replace custom sampling blocks with `sample_generated_field(...)` or `sample_with_rng(...)`
+3. optionally add `ProvenanceGenerator` impl for clarity
+
+no breaking migration is required:
+
+- existing `Generator` implementations continue to compile
+- adoption can be incremental field by field
+
+#### supported expectation statement
+
+supported guarantee:
+
+- "automatic provenance" means helper-driven generation paths will always carry source refs into `GeneratedField`.
+
+non-guarantee:
+
+- arbitrary user-defined generation code that does not use helper paths is not auto-instrumented.
+
 ### final ordered checklist for execution
 
 - [x] commit `1`: provenance ergonomics
@@ -492,5 +551,5 @@ commit message suggestion:
 - [x] commit `3`: prelude module
 - [x] commit `3a`: optional provenance-first trait
 - [x] commit `4`: normalized error surface
-- [ ] commit `5`: validation hook extension points
-- [ ] commit `5a`: provenance docs and migration guidance
+- [x] commit `5`: validation hook extension points
+- [x] commit `5a`: provenance docs and migration guidance

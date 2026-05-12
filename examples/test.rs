@@ -26,7 +26,7 @@ use aethellib::generator::{
 use aethellib::loader::error::LoaderErrorKind;
 use aethellib::merger::error::MergerError;
 use aethellib::merger::error::MergerErrorKind;
-use aethellib::merger::{InMemoryMergeSource, merge_sources};
+use aethellib::merger::{InMemoryMergeSource, MergeValidator, merge_files_with_validator, merge_sources, merge_sources_with_validator};
 use aethellib::prelude::{
     AethelCorpus, AethelDoc, AethelDocHeader, GeneratedField, Generator, MergeOptions,
     ProvenanceGenerator, SourceAethelDoc, SourceRef, TargetedLoader, merge_files,
@@ -103,6 +103,27 @@ impl ProvenanceGenerator for ExampleGenerator {
     type Value = String;
 }
 
+struct TitleContainsValidator {
+    needle: &'static str,
+}
+
+impl MergeValidator<ExampleLoader> for TitleContainsValidator {
+    fn validate(
+        &self,
+        document: &AethelDoc<ExampleLoader>,
+        source_path: &str,
+    ) -> Result<(), MergerError> {
+        if document.header.title.contains(self.needle) {
+            Ok(())
+        } else {
+            Err(MergerError::InvalidInput(format!(
+                "validator rejected source '{source_path}': header.title must contain '{}'",
+                self.needle
+            )))
+        }
+    }
+}
+
 #[allow(deprecated)]
 fn merge_with_legacy_alias(paths: &[impl AsRef<Path>]) -> Result<AethelCorpus<ExampleLoader>, MergerError> {
     aethellib::merger::merge_target_files::<ExampleLoader>(paths, None)
@@ -159,6 +180,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     let in_memory_corpus = merge_sources::<ExampleLoader>(&in_memory_sources, None)?;
     assert_eq!(in_memory_corpus.target(), "example");
     assert_eq!(in_memory_corpus.documents.len(), 2);
+
+    // verify validation-hook merge paths for file and in-memory entrypoints.
+    let set_validator = TitleContainsValidator { needle: "set" };
+    let validated_file_corpus = merge_files_with_validator::<ExampleLoader>(
+        &merge_paths,
+        None,
+        &set_validator,
+    )?;
+    assert_eq!(validated_file_corpus.documents.len(), 2);
+
+    let validated_memory_corpus = merge_sources_with_validator::<ExampleLoader>(
+        &in_memory_sources,
+        None,
+        &set_validator,
+    )?;
+    assert_eq!(validated_memory_corpus.documents.len(), 2);
+
+    let alpha_only_validator = TitleContainsValidator { needle: "alpha" };
+    let rejected_file_merge = merge_files_with_validator::<ExampleLoader>(
+        &merge_paths,
+        None,
+        &alpha_only_validator,
+    );
+    assert!(rejected_file_merge.is_err());
 
     // verify deprecated alias remains functional during migration window.
     let corpus_legacy = merge_with_legacy_alias(&merge_paths)?;
