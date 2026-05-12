@@ -486,8 +486,8 @@ commit message suggestion:
 ### final ordered checklist for execution
 
 - [x] commit `1`: provenance ergonomics
-- [ ] commit `1a`: provenance candidate index
-- [ ] commit `1b`: automatic provenance sampling helpers
+- [x] commit `1a`: provenance candidate index
+- [x] commit `1b`: automatic provenance sampling helpers
 - [ ] commit `2`: merge-from-memory api
 - [ ] commit `3`: prelude module
 - [ ] commit `3a`: optional provenance-first trait
