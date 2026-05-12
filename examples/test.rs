@@ -23,7 +23,9 @@ use aethellib::generator::{
     GeneratedFieldCandidates, ProvenanceCandidateIndex,
     choose_generated_field, collect_generated_field_candidates,
 };
+use aethellib::loader::error::LoaderErrorKind;
 use aethellib::merger::error::MergerError;
+use aethellib::merger::error::MergerErrorKind;
 use aethellib::merger::{InMemoryMergeSource, merge_sources};
 use aethellib::prelude::{
     AethelCorpus, AethelDoc, AethelDocHeader, GeneratedField, Generator, MergeOptions,
@@ -169,10 +171,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dup_paths = vec![dup_one_path, dup_two_path];
     let dup_result = merge_files::<ExampleLoader>(&dup_paths, Some(strict_opts));
     assert!(dup_result.is_err());
+    let dup_error = dup_result.err().ok_or("expected duplicate merge error")?;
+    assert_eq!(dup_error.kind(), MergerErrorKind::OptionViolation);
 
     // verify target mismatch errors still propagate through loader parsing.
     let mismatch = ExampleLoader::from_file(&person_path);
     assert!(mismatch.is_err());
+    let mismatch_error = mismatch.err().ok_or("expected target mismatch error")?;
+    assert_eq!(mismatch_error.kind(), LoaderErrorKind::TargetMismatch);
 
     // verify target alias usage from public crate root.
     let target_value: Target = ExampleLoader::TARGET.to_string();

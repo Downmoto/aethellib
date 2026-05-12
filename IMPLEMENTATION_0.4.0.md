@@ -491,6 +491,6 @@ commit message suggestion:
 - [x] commit `2`: merge-from-memory api
 - [x] commit `3`: prelude module
 - [x] commit `3a`: optional provenance-first trait
-- [ ] commit `4`: normalized error surface
+- [x] commit `4`: normalized error surface
 - [ ] commit `5`: validation hook extension points
 - [ ] commit `5a`: provenance docs and migration guidance

@@ -4,6 +4,14 @@ use std::{fmt, path::Path};
 
 use crate::Target;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// stable machine-readable loader error categories.
+pub enum LoaderErrorKind {
+    Read,
+    Parse,
+    TargetMismatch,
+}
+
 #[derive(Debug)]
 /// errors that can happen while loading and validating a toml file.
 pub enum LoaderError {
@@ -73,6 +81,15 @@ impl From<toml::de::Error> for LoaderError {
 }
 
 impl LoaderError {
+    /// returns the stable machine-readable kind for this loader error.
+    pub fn kind(&self) -> LoaderErrorKind {
+        match self {
+            LoaderError::ReadError { .. } => LoaderErrorKind::Read,
+            LoaderError::ParseError { .. } => LoaderErrorKind::Parse,
+            LoaderError::TargetMismatch { .. } => LoaderErrorKind::TargetMismatch,
+        }
+    }
+
     /// creates a read error with source path context.
     pub(crate) fn read_for_path(path: impl AsRef<Path>, source: std::io::Error) -> Self {
         LoaderError::ReadError {
@@ -105,6 +122,7 @@ mod tests {
             error.to_string(),
             "target mismatch: expected 'weapon', got 'person'"
         );
+        assert_eq!(error.kind(), LoaderErrorKind::TargetMismatch);
     }
 
     #[test]
@@ -119,6 +137,7 @@ mod tests {
             error,
             LoaderError::ReadError { path: Some(_), .. }
         ));
+        assert_eq!(error.kind(), LoaderErrorKind::Read);
     }
 
     #[test]
@@ -131,5 +150,6 @@ mod tests {
             error,
             LoaderError::ParseError { path: Some(_), .. }
         ));
+        assert_eq!(error.kind(), LoaderErrorKind::Parse);
     }
 }
