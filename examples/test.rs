@@ -20,14 +20,16 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use aethellib::generator::{
-    GeneratedField, GeneratedFieldCandidates, Generator, ProvenanceCandidateIndex, SourceRef,
+    GeneratedFieldCandidates, ProvenanceCandidateIndex,
     choose_generated_field, collect_generated_field_candidates,
 };
-use aethellib::loader::TargetedLoader;
 use aethellib::merger::error::MergerError;
-use aethellib::merger::{InMemoryMergeSource, merge_files, merge_sources};
-use aethellib::merger::merger_options::MergeOptions;
-use aethellib::{AethelCorpus, AethelDoc, AethelDocHeader, SourceAethelDoc, Target};
+use aethellib::merger::{InMemoryMergeSource, merge_sources};
+use aethellib::prelude::{
+    AethelCorpus, AethelDoc, AethelDocHeader, GeneratedField, Generator, MergeOptions,
+    ProvenanceGenerator, SourceAethelDoc, SourceRef, TargetedLoader, merge_files,
+};
+use aethellib::Target;
 use rand::Rng;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
@@ -93,6 +95,10 @@ impl Generator for ExampleGenerator {
             .sample_with_rng(rng)
             .expect("example generator requires at least one candidate value")
     }
+}
+
+impl ProvenanceGenerator for ExampleGenerator {
+    type Value = String;
 }
 
 #[allow(deprecated)]
@@ -260,6 +266,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert!(generated_field.has_source_id(generated_field.source_refs[0].source_id.as_str()));
     assert!(!generated_field.source_ids().is_empty());
     assert!(!generated_field.source_paths_in(&corpus_from_sources).is_empty());
+
+    // verify optional provenance-first trait helpers.
+    let mut trait_rng = rand::rngs::StdRng::seed_from_u64(33);
+    let trait_generated = from_new.generate_field_with_rng(&mut trait_rng);
+    assert!(!trait_generated.value.is_empty());
+    assert!(!trait_generated.source_refs.is_empty());
+    assert!(!from_new.generate_field().source_refs.is_empty());
 
     // verify file-backed constructor convenience.
     let from_file_generator = ExampleGenerator::from_file(alpha_path.as_str())?;

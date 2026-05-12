@@ -489,8 +489,8 @@ commit message suggestion:
 - [x] commit `1a`: provenance candidate index
 - [x] commit `1b`: automatic provenance sampling helpers
 - [x] commit `2`: merge-from-memory api
-- [ ] commit `3`: prelude module
-- [ ] commit `3a`: optional provenance-first trait
+- [x] commit `3`: prelude module
+- [x] commit `3a`: optional provenance-first trait
 - [ ] commit `4`: normalized error surface
 - [ ] commit `5`: validation hook extension points
 - [ ] commit `5a`: provenance docs and migration guidance

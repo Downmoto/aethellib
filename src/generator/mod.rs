@@ -58,6 +58,26 @@ pub trait Generator: Sized {
     }
 }
 
+/// optional provenance-first generator interface.
+///
+/// this trait does not replace `Generator`; it provides a clearer semantic path
+/// for generator implementations whose output is always `GeneratedField<T>`.
+pub trait ProvenanceGenerator: Generator<Output = GeneratedField<Self::Value>> {
+    /// scalar generated value type wrapped by `GeneratedField`.
+    type Value;
+
+    /// builds one provenance-rich output value using the supplied rng.
+    fn generate_field_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> GeneratedField<Self::Value> {
+        self.generate_with_rng(rng)
+    }
+
+    /// builds one provenance-rich output value with thread-local randomness.
+    fn generate_field(&self) -> GeneratedField<Self::Value> {
+        let mut rng = thread_rng();
+        self.generate_field_with_rng(&mut rng)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// provenance reference for one source field.
 pub struct SourceRef {

@@ -13,6 +13,8 @@ pub mod generator;
 pub mod loader;
 /// merge module entrypoint.
 pub mod merger;
+/// prelude module for common imports.
+pub mod prelude;
 
 
 /// open target identifier used by loaders, mergers, and generators.
