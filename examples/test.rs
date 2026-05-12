@@ -4,8 +4,9 @@ use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::collections::HashMap;
 
-use aethellib::generator::Generator;
+use aethellib::generator::{GeneratedField, Generator, SourceRef};
 use aethellib::loader::TargetedLoader;
 use aethellib::merger::error::MergerError;
 use aethellib::merger::merge_files;
@@ -51,25 +52,48 @@ struct ExampleValues {
 
 struct ExampleGenerator {
     words: Vec<String>,
+    source_refs_by_word: HashMap<String, Vec<SourceRef>>,
 }
 
 impl Generator for ExampleGenerator {
     type Loader = ExampleLoader;
-    type Output = String;
+    type Output = GeneratedField<String>;
 
     fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
-        let words = corpus
-            .documents
-            .iter()
-            .flat_map(|doc| doc.data.values.words.iter().cloned())
-            .collect();
+        let mut words: Vec<String> = Vec::new();
+        let mut source_refs_by_word: HashMap<String, Vec<SourceRef>> = HashMap::new();
 
-        Self { words }
+        for doc in corpus.documents {
+            for word in doc.data.values.words {
+                words.push(word.clone());
+                source_refs_by_word
+                    .entry(word)
+                    .or_default()
+                    .push(SourceRef {
+                        source_id: doc.source_id.clone(),
+                        source_name: doc.header.title.clone(),
+                        section: "values".to_string(),
+                        field: "words".to_string(),
+                    });
+            }
+        }
+
+        Self {
+            words,
+            source_refs_by_word,
+        }
     }
 
     fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::Output {
         let index = rng.gen_range(0..self.words.len());
-        self.words[index].clone()
+        let value = self.words[index].clone();
+        let source_refs = self
+            .source_refs_by_word
+            .get(&value)
+            .cloned()
+            .unwrap_or_default();
+
+        GeneratedField { value, source_refs }
     }
 }
 
@@ -105,6 +129,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let corpus = merge_files::<ExampleLoader>(&merge_paths, None)?;
     assert_eq!(corpus.target(), "example");
     assert_eq!(corpus.documents.len(), 2);
+    assert_eq!(corpus.source_ids().len(), 2);
+    assert_eq!(corpus.source_paths().len(), 2);
+    assert!(corpus.find_source(corpus.source_ids()[0]).is_some());
 
     let corpus_legacy = merge_with_legacy_alias(&merge_paths)?;
     assert_eq!(corpus_legacy.documents.len(), 2);
@@ -156,19 +183,34 @@ fn main() -> Result<(), Box<dyn Error>> {
     let from_new = ExampleGenerator::new(corpus_from_sources.clone());
     let mut seeded_rng = rand::rngs::StdRng::seed_from_u64(7);
     let seeded_value = from_new.generate_with_rng(&mut seeded_rng);
-    assert!(!seeded_value.is_empty());
+    assert!(!seeded_value.value.is_empty());
+    assert!(!seeded_value.source_refs.is_empty());
+
+    let mut provenance_rng = rand::rngs::StdRng::seed_from_u64(11);
+    let generated_field = from_new.generate_with_rng(&mut provenance_rng);
+    assert!(!generated_field.value.is_empty());
+    assert!(!generated_field.source_refs.is_empty());
+    assert_eq!(generated_field.source_refs[0].section, "values");
+    assert_eq!(generated_field.source_refs[0].field, "words");
+    assert!(generated_field.source_refs[0].matches("values", "words"));
+    assert!(generated_field.has_source_id(generated_field.source_refs[0].source_id.as_str()));
+    assert!(!generated_field.source_ids().is_empty());
+    assert!(!generated_field.source_paths_in(&corpus_from_sources).is_empty());
 
     let from_file_generator = ExampleGenerator::from_file(alpha_path.as_str())?;
-    assert!(!from_file_generator.generate().is_empty());
+    assert!(!from_file_generator.generate().value.is_empty());
+    assert!(!from_file_generator.generate().source_refs.is_empty());
 
     let from_files_generator = ExampleGenerator::from_files(&merge_paths)?;
-    assert!(!from_files_generator.generate().is_empty());
+    assert!(!from_files_generator.generate().value.is_empty());
+    assert!(!from_files_generator.generate().source_refs.is_empty());
 
     let from_documents_generator = ExampleGenerator::from_documents(vec![
         source_single,
         source_many.into_iter().next().ok_or("missing source doc")?,
     ]);
-    assert!(!from_documents_generator.generate().is_empty());
+    assert!(!from_documents_generator.generate().value.is_empty());
+    assert!(!from_documents_generator.generate().source_refs.is_empty());
 
     println!("example api walkthrough passed");
     Ok(())

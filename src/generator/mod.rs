@@ -70,6 +70,13 @@ pub struct SourceRef {
     pub field: String,
 }
 
+impl SourceRef {
+    /// returns true when this reference points to the given section and field.
+    pub fn matches(&self, section: &str, field: &str) -> bool {
+        self.section == section && self.field == field
+    }
+}
+
 #[derive(Debug, Clone)]
 /// generated field value with aggregated provenance references.
 pub struct GeneratedField<T> {
@@ -77,4 +84,41 @@ pub struct GeneratedField<T> {
     pub value: T,
     /// all source refs that can yield this value.
     pub source_refs: Vec<SourceRef>,
+}
+
+impl<T> GeneratedField<T> {
+    /// returns true when provenance contains the given source id.
+    pub fn has_source_id(&self, source_id: &str) -> bool {
+        self.source_refs
+            .iter()
+            .any(|source_ref| source_ref.source_id == source_id)
+    }
+
+    /// returns distinct source ids in first-seen order.
+    pub fn source_ids(&self) -> Vec<&str> {
+        let mut ids: Vec<&str> = Vec::new();
+
+        for source_ref in &self.source_refs {
+            let id = source_ref.source_id.as_str();
+            if !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
+
+        ids
+    }
+
+    /// resolves source ids in this generated field into source paths in corpus order.
+    pub fn source_paths_in<'a, U>(&self, corpus: &'a AethelCorpus<U>) -> Vec<&'a str> {
+        let source_ids = self.source_ids();
+        let mut source_paths: Vec<&'a str> = Vec::new();
+
+        for source_id in source_ids {
+            if let Some(source_document) = corpus.find_source(source_id) {
+                source_paths.push(source_document.source_path.as_str());
+            }
+        }
+
+        source_paths
+    }
 }
