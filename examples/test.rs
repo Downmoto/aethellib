@@ -25,7 +25,7 @@ use aethellib::generator::{
 };
 use aethellib::loader::TargetedLoader;
 use aethellib::merger::error::MergerError;
-use aethellib::merger::merge_files;
+use aethellib::merger::{InMemoryMergeSource, merge_files, merge_sources};
 use aethellib::merger::merger_options::MergeOptions;
 use aethellib::{AethelCorpus, AethelDoc, AethelDocHeader, SourceAethelDoc, Target};
 use rand::Rng;
@@ -136,6 +136,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert_eq!(corpus.source_ids().len(), 2);
     assert_eq!(corpus.source_paths().len(), 2);
     assert!(corpus.find_source(corpus.source_ids()[0]).is_some());
+
+    // verify in-memory merge entrypoint for callers that already hold raw inputs.
+    let in_memory_sources = [
+        InMemoryMergeSource {
+            source_name: "memory-alpha.toml",
+            raw: raw_alpha.as_str(),
+        },
+        InMemoryMergeSource {
+            source_name: "memory-beta.toml",
+            raw: raw_beta.as_str(),
+        },
+    ];
+    let in_memory_corpus = merge_sources::<ExampleLoader>(&in_memory_sources, None)?;
+    assert_eq!(in_memory_corpus.target(), "example");
+    assert_eq!(in_memory_corpus.documents.len(), 2);
 
     // verify deprecated alias remains functional during migration window.
     let corpus_legacy = merge_with_legacy_alias(&merge_paths)?;
