@@ -33,7 +33,7 @@ pub struct AethelDocHeader {
     pub version: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 /// parsed toml payload with header plus target-specific body data.
 pub struct AethelDoc<T> {
     /// parsed file header.
