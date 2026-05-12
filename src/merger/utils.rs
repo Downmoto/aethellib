@@ -12,16 +12,39 @@ use crate::{
     AethelCorpus, AethelDoc, SourceAethelDoc,
     loader::{TargetedLoader, error::LoaderError},
     merger::{
-        MergeSourceInput,
+        MergeSourceInput, MergeValidator,
         error::MergerError,
         merger_options::{MergeOptions, MergerOptionError},
     },
 };
 
+struct NoopMergeValidator;
+
+impl<T> MergeValidator<T> for NoopMergeValidator
+where
+    T: TargetedLoader,
+{
+    fn validate(&self, _document: &AethelDoc<T>, _source_path: &str) -> Result<(), MergerError> {
+        Ok(())
+    }
+}
+
 /// loads and validates source files for one target, then assembles a corpus.
 pub fn build_corpus_from_paths<T>(
     paths: &[impl AsRef<Path>],
     opts: Option<MergeOptions>,
+) -> Result<AethelCorpus<T>, MergerError>
+where
+    T: TargetedLoader,
+{
+    build_corpus_from_paths_with_validator::<T>(paths, opts, &NoopMergeValidator)
+}
+
+/// loads and validates source files for one target, then assembles a corpus using a validator.
+pub fn build_corpus_from_paths_with_validator<T>(
+    paths: &[impl AsRef<Path>],
+    opts: Option<MergeOptions>,
+    validator: &impl MergeValidator<T>,
 ) -> Result<AethelCorpus<T>, MergerError>
 where
     T: TargetedLoader,
@@ -49,13 +72,25 @@ where
         })
         .collect();
 
-    build_corpus_from_sources::<T>(&source_refs, opts)
+    build_corpus_from_sources_with_validator::<T>(&source_refs, opts, validator)
 }
 
 /// assembles a target corpus from already-loaded source payloads.
 pub fn build_corpus_from_sources<T>(
     sources: &[MergeSourceInput<'_>],
     opts: Option<MergeOptions>,
+) -> Result<AethelCorpus<T>, MergerError>
+where
+    T: TargetedLoader,
+{
+    build_corpus_from_sources_with_validator::<T>(sources, opts, &NoopMergeValidator)
+}
+
+/// assembles a target corpus from already-loaded source payloads using a validator.
+pub fn build_corpus_from_sources_with_validator<T>(
+    sources: &[MergeSourceInput<'_>],
+    opts: Option<MergeOptions>,
+    validator: &impl MergeValidator<T>,
 ) -> Result<AethelCorpus<T>, MergerError>
 where
     T: TargetedLoader,
@@ -82,6 +117,8 @@ where
             }
             .into());
         }
+
+        validator.validate(&parsed, source.path)?;
 
         let source_hash = hash_source_content(parsed.header.target.as_str(), source.raw);
         let source_id = make_unique_source_id(&source_hash, &mut seen_source_ids);

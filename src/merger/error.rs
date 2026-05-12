@@ -2,7 +2,20 @@
 
 use std::fmt;
 
-use crate::{loader::error::LoaderError, merger::merger_options::MergerOptionError};
+use crate::{
+    loader::error::{LoaderError, LoaderErrorKind},
+    merger::merger_options::MergerOptionError,
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// stable machine-readable merge error categories.
+pub enum MergerErrorKind {
+    LoaderRead,
+    LoaderParse,
+    LoaderTargetMismatch,
+    OptionViolation,
+    InvalidInput,
+}
 
 #[derive(Debug)]
 /// merge errors returned by the module-level merge entrypoint.
@@ -27,6 +40,21 @@ impl fmt::Display for MergerError {
 
 impl std::error::Error for MergerError {}
 
+impl MergerError {
+    /// returns the stable machine-readable kind for this merge error.
+    pub fn kind(&self) -> MergerErrorKind {
+        match self {
+            MergerError::Loader(loader_error) => match loader_error.kind() {
+                LoaderErrorKind::Read => MergerErrorKind::LoaderRead,
+                LoaderErrorKind::Parse => MergerErrorKind::LoaderParse,
+                LoaderErrorKind::TargetMismatch => MergerErrorKind::LoaderTargetMismatch,
+            },
+            MergerError::MergerOption(_) => MergerErrorKind::OptionViolation,
+            MergerError::InvalidInput(_) => MergerErrorKind::InvalidInput,
+        }
+    }
+}
+
 impl From<LoaderError> for MergerError {
     fn from(value: LoaderError) -> Self {
         MergerError::Loader(value)
@@ -47,6 +75,7 @@ mod tests {
     fn test_display_for_invalid_input() {
         let error = MergerError::InvalidInput("bad input".to_string());
         assert_eq!(error.to_string(), "bad input");
+        assert_eq!(error.kind(), MergerErrorKind::InvalidInput);
     }
 
     #[test]
@@ -58,6 +87,7 @@ mod tests {
         let wrapped: MergerError = loader_error.into();
 
         assert!(matches!(wrapped, MergerError::Loader(_)));
+        assert_eq!(wrapped.kind(), MergerErrorKind::LoaderTargetMismatch);
     }
 
     #[test]
@@ -68,5 +98,6 @@ mod tests {
         let wrapped: MergerError = option_error.into();
 
         assert!(matches!(wrapped, MergerError::MergerOption(_)));
+        assert_eq!(wrapped.kind(), MergerErrorKind::OptionViolation);
     }
 }

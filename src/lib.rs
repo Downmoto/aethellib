@@ -13,6 +13,8 @@ pub mod generator;
 pub mod loader;
 /// merge module entrypoint.
 pub mod merger;
+/// prelude module for common imports.
+pub mod prelude;
 
 
 /// open target identifier used by loaders, mergers, and generators.
@@ -87,5 +89,28 @@ impl<T> AethelCorpus<T> {
     /// returns the target represented by this corpus.
     pub fn target(&self) -> &str {
         self.target.as_str()
+    }
+
+    /// returns all source ids in corpus order.
+    pub fn source_ids(&self) -> Vec<&str> {
+        self.documents
+            .iter()
+            .map(|document| document.source_id.as_str())
+            .collect()
+    }
+
+    /// returns all source paths in corpus order.
+    pub fn source_paths(&self) -> Vec<&str> {
+        self.documents
+            .iter()
+            .map(|document| document.source_path.as_str())
+            .collect()
+    }
+
+    /// finds one source document by source id.
+    pub fn find_source(&self, source_id: &str) -> Option<&SourceAethelDoc<T>> {
+        self.documents
+            .iter()
+            .find(|document| document.source_id == source_id)
     }
 }
