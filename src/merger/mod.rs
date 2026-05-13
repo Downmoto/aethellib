@@ -116,4 +116,3 @@ where
 {
     merge_files::<T>(paths, opts)
 }
-

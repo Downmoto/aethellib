@@ -4,6 +4,8 @@
 //! from loaded and validated aethel documents.
 //! generators should expose a convenience `generate()` method and
 //! a deterministic `generate_with_rng(...)` method for reproducible tests.
+pub mod utils;
+pub use crate::generator::utils::{collect_generated_field_candidates};
 
 use std::path::Path;
 use std::{collections::HashMap, hash::Hash};
@@ -22,7 +24,7 @@ pub trait Generator: Sized {
     /// loader payload type used by this generator target.
     type Loader: TargetedLoader;
     /// generated output type.
-    type Output;
+    type Output: Generated;
 
     /// creates a generator from a merged target corpus.
     fn new(corpus: AethelCorpus<Self::Loader>) -> Self;
@@ -58,23 +60,11 @@ pub trait Generator: Sized {
     }
 }
 
-/// optional provenance-first generator interface.
-///
-/// this trait does not replace `Generator`; it provides a clearer semantic path
-/// for generator implementations whose output is always `GeneratedField<T>`.
-pub trait ProvenanceGenerator: Generator<Output = GeneratedField<Self::Value>> {
-    /// scalar generated value type wrapped by `GeneratedField`.
-    type Value;
+pub trait Generated: Sized {
+    type Loader: TargetedLoader;
 
-    /// builds one provenance-rich output value using the supplied rng.
-    fn generate_field_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> GeneratedField<Self::Value> {
-        self.generate_with_rng(rng)
-    }
-
-    /// builds one provenance-rich output value with thread-local randomness.
-    fn generate_field(&self) -> GeneratedField<Self::Value> {
-        let mut rng = thread_rng();
-        self.generate_field_with_rng(&mut rng)
+    fn get(&self) {
+        todo!()
     }
 }
 
@@ -105,149 +95,6 @@ pub struct GeneratedField<T> {
     pub value: T,
     /// all source refs that can yield this value.
     pub source_refs: Vec<SourceRef>,
-}
-
-#[derive(Debug, Clone)]
-/// prepared candidates and provenance index for one generated output field.
-pub struct GeneratedFieldCandidates<T> {
-    /// candidate values used for sampling.
-    pub values: Vec<T>,
-    /// value-to-provenance lookup built from source documents.
-    pub provenance: ProvenanceCandidateIndex<T>,
-}
-
-impl<T> GeneratedFieldCandidates<T>
-where
-    T: Eq + Hash + Clone,
-{
-    /// samples one generated field using the prepared values and provenance.
-    pub fn sample_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Option<GeneratedField<T>> {
-        sample_generated_field(&self.values, &self.provenance, rng)
-    }
-}
-
-#[derive(Debug, Clone)]
-/// index mapping generated values to all matching provenance references.
-pub struct ProvenanceCandidateIndex<T> {
-    entries: HashMap<T, Vec<SourceRef>>,
-}
-
-impl<T> ProvenanceCandidateIndex<T>
-where
-    T: Eq + Hash,
-{
-    /// creates an empty provenance candidate index.
-    pub fn new() -> Self {
-        Self {
-            entries: HashMap::new(),
-        }
-    }
-
-    /// inserts one value-to-source mapping and keeps first-seen order for refs.
-    pub fn insert(&mut self, value: T, source_ref: SourceRef) {
-        let refs = self.entries.entry(value).or_default();
-        if !refs.contains(&source_ref) {
-            refs.push(source_ref);
-        }
-    }
-
-    /// returns all provenance refs for one candidate value.
-    pub fn refs_for(&self, value: &T) -> &[SourceRef] {
-        self.entries
-            .get(value)
-            .map(Vec::as_slice)
-            .unwrap_or(&[])
-    }
-
-    /// returns true when the index contains at least one mapping for a value.
-    pub fn contains_value(&self, value: &T) -> bool {
-        self.entries.contains_key(value)
-    }
-}
-
-impl<T> Default for ProvenanceCandidateIndex<T>
-where
-    T: Eq + Hash,
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// collects candidate values and provenance refs from one corpus field extractor.
-pub fn collect_generated_field_candidates<L, T, F>(
-    corpus: &AethelCorpus<L>,
-    section: &str,
-    field: &str,
-    mut extract_values: F,
-) -> GeneratedFieldCandidates<T>
-where
-    T: Eq + Hash + Clone,
-    F: FnMut(&L) -> Vec<T>,
-{
-    let mut values: Vec<T> = Vec::new();
-    let mut provenance: ProvenanceCandidateIndex<T> = ProvenanceCandidateIndex::new();
-
-    for source_document in &corpus.documents {
-        let extracted_values = extract_values(&source_document.data);
-        for value in extracted_values {
-            values.push(value.clone());
-            provenance.insert(
-                value,
-                SourceRef {
-                    source_id: source_document.source_id.clone(),
-                    source_name: source_document.header.title.clone(),
-                    section: section.to_string(),
-                    field: field.to_string(),
-                },
-            );
-        }
-    }
-
-    GeneratedFieldCandidates { values, provenance }
-}
-
-/// samples one candidate value and returns it with all known provenance refs.
-pub fn sample_generated_field<T, R>(
-    values: &[T],
-    index: &ProvenanceCandidateIndex<T>,
-    rng: &mut R,
-) -> Option<GeneratedField<T>>
-where
-    T: Eq + Hash + Clone,
-    R: Rng + ?Sized,
-{
-    if values.is_empty() {
-        return None;
-    }
-
-    let picked_index = rng.gen_range(0..values.len());
-    let value = values[picked_index].clone();
-    let source_refs = index.refs_for(&value).to_vec();
-
-    Some(GeneratedField { value, source_refs })
-}
-
-/// samples one `(value, refs)` pair and returns a generated field.
-pub fn choose_generated_field<T, R>(
-    pairs: &[(T, Vec<SourceRef>)],
-    rng: &mut R,
-) -> Option<GeneratedField<T>>
-where
-    T: Clone,
-    R: Rng + ?Sized,
-{
-    if pairs.is_empty() {
-        return None;
-    }
-
-    let picked_index = rng.gen_range(0..pairs.len());
-    let (value, source_refs) = &pairs[picked_index];
-
-    Some(GeneratedField {
-        value: value.clone(),
-        source_refs: source_refs.clone(),
-    })
 }
 
 impl<T> GeneratedField<T> {
@@ -284,5 +131,69 @@ impl<T> GeneratedField<T> {
         }
 
         source_paths
+    }
+}
+
+#[derive(Debug, Clone)]
+/// prepared candidates and provenance index for one generated output field.
+pub struct GeneratedFieldCandidates<T> {
+    /// candidate values used for sampling.
+    pub values: Vec<T>,
+    /// value-to-provenance lookup built from source documents.
+    pub provenance: ProvenanceCandidateIndex<T>,
+}
+
+impl<T> GeneratedFieldCandidates<T>
+where
+    T: Eq + Hash + Clone,
+{
+    /// samples one generated field using the prepared values and provenance.
+    pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Option<GeneratedField<T>> {
+        utils::sample_generated_field(&self.values, &self.provenance, rng)
+    }
+}
+
+#[derive(Debug, Clone)]
+/// index mapping generated values to all matching provenance references.
+pub struct ProvenanceCandidateIndex<T> {
+    entries: HashMap<T, Vec<SourceRef>>,
+}
+
+impl<T> ProvenanceCandidateIndex<T>
+where
+    T: Eq + Hash,
+{
+    /// creates an empty provenance candidate index.
+    pub fn new() -> Self {
+        Self {
+            entries: HashMap::new(),
+        }
+    }
+
+    /// inserts one value-to-source mapping and keeps first-seen order for refs.
+    pub fn insert(&mut self, value: T, source_ref: SourceRef) {
+        let refs = self.entries.entry(value).or_default();
+        if !refs.contains(&source_ref) {
+            refs.push(source_ref);
+        }
+    }
+
+    /// returns all provenance refs for one candidate value.
+    pub fn refs_for(&self, value: &T) -> &[SourceRef] {
+        self.entries.get(value).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// returns true when the index contains at least one mapping for a value.
+    pub fn contains_value(&self, value: &T) -> bool {
+        self.entries.contains_key(value)
+    }
+}
+
+impl<T> Default for ProvenanceCandidateIndex<T>
+where
+    T: Eq + Hash,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }

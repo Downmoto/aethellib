@@ -14,10 +14,13 @@ pub trait TargetedLoader: Sized + DeserializeOwned {
     const TARGET: &'static str;
 
     /// parse and target-validate one toml payload.
-    fn from_str(path_refrence: impl AsRef<Path>, raw: &str) -> Result<AethelDoc<Self>, LoaderError> {
+    fn from_str(
+        path_refrence: impl AsRef<Path>,
+        raw: &str,
+    ) -> Result<AethelDoc<Self>, LoaderError> {
         let path_ref = path_refrence.as_ref();
-        let parsed: AethelDoc<Self> = toml::from_str(raw)
-            .map_err(|source| LoaderError::parse_for_path(path_ref, source))?;
+        let parsed: AethelDoc<Self> =
+            toml::from_str(raw).map_err(|source| LoaderError::parse_for_path(path_ref, source))?;
 
         if parsed.header.target != Self::TARGET {
             return Err(LoaderError::TargetMismatch {

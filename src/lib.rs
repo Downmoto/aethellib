@@ -16,7 +16,6 @@ pub mod merger;
 /// prelude module for common imports.
 pub mod prelude;
 
-
 /// open target identifier used by loaders, mergers, and generators.
 pub type Target = String;
 

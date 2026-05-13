@@ -110,7 +110,8 @@ where
     for source in sources {
         let parsed = T::from_str(source.path, source.raw)?;
 
-        if !options.identical_title_allowed && !seen_header_names.insert(parsed.header.title.clone())
+        if !options.identical_title_allowed
+            && !seen_header_names.insert(parsed.header.title.clone())
         {
             return Err(MergerOptionError::IdenticalNameAllowed {
                 header: parsed.header.title,
