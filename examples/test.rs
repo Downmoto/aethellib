@@ -19,19 +19,22 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use aethellib::Target;
 use aethellib::generator::{
-    GeneratedFieldCandidates, ProvenanceCandidateIndex,
-    choose_generated_field, collect_generated_field_candidates,
+    Generated, GeneratedFieldCandidates, ProvenanceCandidateIndex,
+    collect_generated_field_candidates,
 };
 use aethellib::loader::error::LoaderErrorKind;
 use aethellib::merger::error::MergerError;
 use aethellib::merger::error::MergerErrorKind;
-use aethellib::merger::{InMemoryMergeSource, MergeValidator, merge_files_with_validator, merge_sources, merge_sources_with_validator};
+use aethellib::merger::{
+    InMemoryMergeSource, MergeValidator, merge_files_with_validator, merge_sources,
+    merge_sources_with_validator,
+};
 use aethellib::prelude::{
     AethelCorpus, AethelDoc, AethelDocHeader, GeneratedField, Generator, MergeOptions,
-    ProvenanceGenerator, SourceAethelDoc, SourceRef, TargetedLoader, merge_files,
+    SourceAethelDoc, SourceRef, TargetedLoader, merge_files,
 };
-use aethellib::Target;
 use rand::Rng;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
@@ -75,32 +78,43 @@ struct ExampleValues {
 
 struct ExampleGenerator {
     // prepared candidates let `new` stay small even as generated fields grow.
-    generated: GeneratedFieldCandidates<String>,
+    generated_field: GeneratedFieldCandidates<String>,
+}
+
+struct GeneratedExample {
+    word: GeneratedField<String>,
+}
+
+impl Generated for GeneratedExample {
+    type Loader = ExampleLoader;
+    fn get(&self) {
+        todo!()
+    }
 }
 
 impl Generator for ExampleGenerator {
     type Loader = ExampleLoader;
-    type Output = GeneratedField<String>;
+    type Output = GeneratedExample;
 
     fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
         // the helper builds both candidate values and provenance refs.
-        let generated = collect_generated_field_candidates(&corpus, "values", "words", |loader| {
-            loader.values.words.clone()
-        });
+        let generated_field =
+            collect_generated_field_candidates(&corpus, "values", "words", |loader| {
+                loader.values.words.clone()
+            });
 
-        Self { generated }
+        Self { generated_field }
     }
 
     fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::Output {
         // generated output is provenance-rich by default in this example.
-        self.generated
-            .sample_with_rng(rng)
-            .expect("example generator requires at least one candidate value")
-    }
-}
+        let word = self
+            .generated_field
+            .sample(rng)
+            .expect("example generator requires at least one candidate value");
 
-impl ProvenanceGenerator for ExampleGenerator {
-    type Value = String;
+        GeneratedExample { word }
+    }
 }
 
 struct TitleContainsValidator {
@@ -125,7 +139,9 @@ impl MergeValidator<ExampleLoader> for TitleContainsValidator {
 }
 
 #[allow(deprecated)]
-fn merge_with_legacy_alias(paths: &[impl AsRef<Path>]) -> Result<AethelCorpus<ExampleLoader>, MergerError> {
+fn merge_with_legacy_alias(
+    paths: &[impl AsRef<Path>],
+) -> Result<AethelCorpus<ExampleLoader>, MergerError> {
     aethellib::merger::merge_target_files::<ExampleLoader>(paths, None)
 }
 
@@ -183,26 +199,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // verify validation-hook merge paths for file and in-memory entrypoints.
     let set_validator = TitleContainsValidator { needle: "set" };
-    let validated_file_corpus = merge_files_with_validator::<ExampleLoader>(
-        &merge_paths,
-        None,
-        &set_validator,
-    )?;
+    let validated_file_corpus =
+        merge_files_with_validator::<ExampleLoader>(&merge_paths, None, &set_validator)?;
     assert_eq!(validated_file_corpus.documents.len(), 2);
 
-    let validated_memory_corpus = merge_sources_with_validator::<ExampleLoader>(
-        &in_memory_sources,
-        None,
-        &set_validator,
-    )?;
+    let validated_memory_corpus =
+        merge_sources_with_validator::<ExampleLoader>(&in_memory_sources, None, &set_validator)?;
     assert_eq!(validated_memory_corpus.documents.len(), 2);
 
     let alpha_only_validator = TitleContainsValidator { needle: "alpha" };
-    let rejected_file_merge = merge_files_with_validator::<ExampleLoader>(
-        &merge_paths,
-        None,
-        &alpha_only_validator,
-    );
+    let rejected_file_merge =
+        merge_files_with_validator::<ExampleLoader>(&merge_paths, None, &alpha_only_validator);
     assert!(rejected_file_merge.is_err());
 
     // verify deprecated alias remains functional during migration window.
@@ -249,10 +256,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let source_single = SourceAethelDoc::from_aetheldoc(manual_doc.clone())?;
     let source_many = SourceAethelDoc::from_aetheldocs(vec![
         manual_doc,
-        ExampleLoader::from_str(
-        "inline-beta.toml",
-        &raw_beta,
-    )?])?;
+        ExampleLoader::from_str("inline-beta.toml", &raw_beta)?,
+    ])?;
     assert_eq!(source_many.len(), 2);
 
     // keep one small corpus for generator constructor coverage.
@@ -281,67 +286,57 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert!(candidate_index.contains_value(&"manual".to_string()));
     assert!(!candidate_index.refs_for(&"manual".to_string()).is_empty());
 
-    // verify pair-based helper path for generated field construction.
-    let manual_pairs = vec![
-        (
-            "manual-pair".to_string(),
-            vec![SourceRef {
-                source_id: "manual-source".to_string(),
-                source_name: "manual set".to_string(),
-                section: "values".to_string(),
-                field: "words".to_string(),
-            }],
-        ),
-    ];
-    let mut pair_rng = rand::rngs::StdRng::seed_from_u64(101);
-    let pair_generated = choose_generated_field(&manual_pairs, &mut pair_rng)
-        .ok_or("expected generated field from pair helper")?;
-    assert_eq!(pair_generated.value, "manual-pair");
-    assert_eq!(pair_generated.source_refs.len(), 1);
-
     // verify direct constructor path and deterministic generation.
     let from_new = ExampleGenerator::new(corpus_from_sources.clone());
     let mut seeded_rng = rand::rngs::StdRng::seed_from_u64(7);
     let seeded_value = from_new.generate_with_rng(&mut seeded_rng);
-    assert!(!seeded_value.value.is_empty());
-    assert!(!seeded_value.source_refs.is_empty());
+    assert!(!seeded_value.word.value.is_empty());
+    assert!(!seeded_value.word.source_refs.is_empty());
 
     // verify provenance convenience helpers on generated output.
     let mut provenance_rng = rand::rngs::StdRng::seed_from_u64(11);
     let generated_field = from_new.generate_with_rng(&mut provenance_rng);
-    assert!(!generated_field.value.is_empty());
-    assert!(!generated_field.source_refs.is_empty());
-    assert_eq!(generated_field.source_refs[0].section, "values");
-    assert_eq!(generated_field.source_refs[0].field, "words");
-    assert!(generated_field.source_refs[0].matches("values", "words"));
-    assert!(generated_field.has_source_id(generated_field.source_refs[0].source_id.as_str()));
-    assert!(!generated_field.source_ids().is_empty());
-    assert!(!generated_field.source_paths_in(&corpus_from_sources).is_empty());
-
-    // verify optional provenance-first trait helpers.
-    let mut trait_rng = rand::rngs::StdRng::seed_from_u64(33);
-    let trait_generated = from_new.generate_field_with_rng(&mut trait_rng);
-    assert!(!trait_generated.value.is_empty());
-    assert!(!trait_generated.source_refs.is_empty());
-    assert!(!from_new.generate_field().source_refs.is_empty());
+    assert!(!generated_field.word.value.is_empty());
+    assert!(!generated_field.word.source_refs.is_empty());
+    assert_eq!(generated_field.word.source_refs[0].section, "values");
+    assert_eq!(generated_field.word.source_refs[0].field, "words");
+    assert!(generated_field.word.source_refs[0].matches("values", "words"));
+    assert!(
+        generated_field
+            .word
+            .has_source_id(generated_field.word.source_refs[0].source_id.as_str())
+    );
+    assert!(!generated_field.word.source_ids().is_empty());
+    assert!(
+        !generated_field
+            .word
+            .source_paths_in(&corpus_from_sources)
+            .is_empty()
+    );
 
     // verify file-backed constructor convenience.
     let from_file_generator = ExampleGenerator::from_file(alpha_path.as_str())?;
-    assert!(!from_file_generator.generate().value.is_empty());
-    assert!(!from_file_generator.generate().source_refs.is_empty());
+    assert!(!from_file_generator.generate().word.value.is_empty());
+    assert!(!from_file_generator.generate().word.source_refs.is_empty());
 
     // verify multi-file constructor convenience.
     let from_files_generator = ExampleGenerator::from_files(&merge_paths)?;
-    assert!(!from_files_generator.generate().value.is_empty());
-    assert!(!from_files_generator.generate().source_refs.is_empty());
+    assert!(!from_files_generator.generate().word.value.is_empty());
+    assert!(!from_files_generator.generate().word.source_refs.is_empty());
 
     // verify source-document constructor convenience.
     let from_documents_generator = ExampleGenerator::from_documents(vec![
         source_single,
         source_many.into_iter().next().ok_or("missing source doc")?,
     ]);
-    assert!(!from_documents_generator.generate().value.is_empty());
-    assert!(!from_documents_generator.generate().source_refs.is_empty());
+    assert!(!from_documents_generator.generate().word.value.is_empty());
+    assert!(
+        !from_documents_generator
+            .generate()
+            .word
+            .source_refs
+            .is_empty()
+    );
 
     println!("example api walkthrough passed");
     Ok(())
