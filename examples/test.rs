@@ -9,8 +9,8 @@
 //! - typed single-target merging and merge option handling
 //! - source document conversion helpers
 //! - provenance indexing and generated field helpers
-//! - generator constructors (`new`, `from_file`, `from_files`, `from_documents`)
-//! - deterministic generation via seeded rng
+//! - generation constructors (`new`, `from_file`, `from_files`, `from_documents`)
+//! - deterministic generation via seeded rng with result-based errors
 //!
 //! fixtures are created under `target/` and removed automatically at exit.
 
@@ -21,8 +21,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use aethellib::Target;
 use aethellib::generator::{
-    Generated, GeneratedFieldCandidates, ProvenanceCandidateIndex,
-    collect_generated_field_candidates,
+    GeneratedFieldCandidates, GenerationError, ProvenanceCandidateIndex,
+    generated_field_builder,
 };
 use aethellib::loader::error::LoaderErrorKind;
 use aethellib::merger::error::MergerError;
@@ -32,7 +32,7 @@ use aethellib::merger::{
     merge_sources_with_validator,
 };
 use aethellib::prelude::{
-    AethelCorpus, AethelDoc, AethelDocHeader, GeneratedField, Generator, MergeOptions,
+    AethelCorpus, AethelDoc, AethelDocHeader, GeneratedField, Generation, MergeOptions,
     SourceAethelDoc, SourceRef, TargetedLoader, merge_files,
 };
 use rand::Rng;
@@ -76,44 +76,64 @@ struct ExampleValues {
     words: Vec<String>,
 }
 
-struct ExampleGenerator {
-    // prepared candidates let `new` stay small even as generated fields grow.
-    generated_field: GeneratedFieldCandidates<String>,
-}
-
-struct GeneratedExample {
+struct ExampleGeneration {
     word: GeneratedField<String>,
+    // prepared candidates let `new` stay small even as generated fields grow.
+    generated_field: Option<GeneratedFieldCandidates<String>>,
 }
 
-impl Generated for GeneratedExample {
-    type Loader = ExampleLoader;
-    fn get(&self) {
-        todo!()
+impl ExampleGeneration {
+    fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Result<Self, GenerationError> {
+        // generated output is provenance-rich by default in this example.
+        let generated_field = self
+            .generated_field
+            .as_ref()
+            .ok_or(GenerationError::NotCompiled)?;
+        let word = generated_field.sample("word", rng)?;
+
+        Ok(Self {
+            word,
+            generated_field: self.generated_field.clone(),
+        })
+    }
+
+    fn generate(&self) -> Result<Self, GenerationError> {
+        let mut rng = rand::thread_rng();
+        self.generate_with_rng(&mut rng)
+    }
+
+    fn word(&self) -> &GeneratedField<String> {
+        &self.word
     }
 }
 
-impl Generator for ExampleGenerator {
+impl Generation for ExampleGeneration {
     type Loader = ExampleLoader;
-    type Output = GeneratedExample;
+    type CompiledState = GeneratedFieldCandidates<String>;
+    type Error = GenerationError;
 
     fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
-        // the helper builds both candidate values and provenance refs.
-        let generated_field =
-            collect_generated_field_candidates(&corpus, "values", "words", |loader| {
-                loader.values.words.clone()
-            });
+        // the builder compiles both candidate values and provenance refs.
+        let generated_field = generated_field_builder(&corpus, "values", "words", |loader| {
+            loader.values.words.clone()
+        })
+        .build();
 
-        Self { generated_field }
+        Self {
+            word: GeneratedField::pending(String::new()),
+            generated_field: Some(generated_field),
+        }
     }
 
-    fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::Output {
-        // generated output is provenance-rich by default in this example.
-        let word = self
-            .generated_field
-            .sample(rng)
-            .expect("example generator requires at least one candidate value");
+    fn compile(&mut self) -> Result<(), Self::Error> {
+        if self.generated_field.is_none() {
+            return Err(GenerationError::BuilderDefinition {
+                field: "word".to_string(),
+                reason: "missing compiled candidates".to_string(),
+            });
+        }
 
-        GeneratedExample { word }
+        Ok(())
     }
 }
 
@@ -287,56 +307,64 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert!(!candidate_index.refs_for(&"manual".to_string()).is_empty());
 
     // verify direct constructor path and deterministic generation.
-    let from_new = ExampleGenerator::new(corpus_from_sources.clone());
+    let mut from_new = ExampleGeneration::new(corpus_from_sources.clone());
+    from_new.compile()?;
     let mut seeded_rng = rand::rngs::StdRng::seed_from_u64(7);
-    let seeded_value = from_new.generate_with_rng(&mut seeded_rng);
-    assert!(!seeded_value.word.value.is_empty());
-    assert!(!seeded_value.word.source_refs.is_empty());
+    let seeded_value = from_new.generate_with_rng(&mut seeded_rng)?;
+    assert!(!seeded_value.word().value().is_empty());
+    assert!(!seeded_value.word().source_refs().is_empty());
 
     // verify provenance convenience helpers on generated output.
     let mut provenance_rng = rand::rngs::StdRng::seed_from_u64(11);
-    let generated_field = from_new.generate_with_rng(&mut provenance_rng);
-    assert!(!generated_field.word.value.is_empty());
-    assert!(!generated_field.word.source_refs.is_empty());
-    assert_eq!(generated_field.word.source_refs[0].section, "values");
-    assert_eq!(generated_field.word.source_refs[0].field, "words");
-    assert!(generated_field.word.source_refs[0].matches("values", "words"));
+    let generated_field = from_new.generate_with_rng(&mut provenance_rng)?;
+    assert!(!generated_field.word().value().is_empty());
+    assert!(!generated_field.word().source_refs().is_empty());
+    assert_eq!(
+        generated_field.word().source_refs()[0].section,
+        "values"
+    );
+    assert_eq!(
+        generated_field.word().source_refs()[0].field,
+        "words"
+    );
+    assert!(
+        generated_field.word().source_refs()[0].matches("values", "words")
+    );
     assert!(
         generated_field
-            .word
-            .has_source_id(generated_field.word.source_refs[0].source_id.as_str())
+            .word()
+            .has_source_id(generated_field.word().source_refs()[0].source_id.as_str())
     );
-    assert!(!generated_field.word.source_ids().is_empty());
-    assert!(
-        !generated_field
-            .word
-            .source_paths_in(&corpus_from_sources)
-            .is_empty()
-    );
+    assert!(!generated_field.word().source_ids().is_empty());
+    assert!(!generated_field
+        .word()
+        .source_paths_in(&corpus_from_sources)
+        .is_empty());
+    assert!(!generated_field.word().trace_graph().nodes().is_empty());
 
     // verify file-backed constructor convenience.
-    let from_file_generator = ExampleGenerator::from_file(alpha_path.as_str())?;
-    assert!(!from_file_generator.generate().word.value.is_empty());
-    assert!(!from_file_generator.generate().word.source_refs.is_empty());
+    let mut from_file_generator = ExampleGeneration::from_files(&[alpha_path.as_str()])?;
+    from_file_generator.compile()?;
+    let generated_from_file = from_file_generator.generate()?;
+    assert!(!generated_from_file.word().value().is_empty());
+    assert!(!generated_from_file.word().source_refs().is_empty());
 
     // verify multi-file constructor convenience.
-    let from_files_generator = ExampleGenerator::from_files(&merge_paths)?;
-    assert!(!from_files_generator.generate().word.value.is_empty());
-    assert!(!from_files_generator.generate().word.source_refs.is_empty());
+    let mut from_files_generator = ExampleGeneration::from_files(&merge_paths)?;
+    from_files_generator.compile()?;
+    let generated_from_files = from_files_generator.generate()?;
+    assert!(!generated_from_files.word().value().is_empty());
+    assert!(!generated_from_files.word().source_refs().is_empty());
 
     // verify source-document constructor convenience.
-    let from_documents_generator = ExampleGenerator::from_documents(vec![
+    let mut from_documents_generator = ExampleGeneration::from_documents(vec![
         source_single,
         source_many.into_iter().next().ok_or("missing source doc")?,
     ]);
-    assert!(!from_documents_generator.generate().word.value.is_empty());
-    assert!(
-        !from_documents_generator
-            .generate()
-            .word
-            .source_refs
-            .is_empty()
-    );
+    from_documents_generator.compile()?;
+    let generated_from_documents = from_documents_generator.generate()?;
+    assert!(!generated_from_documents.word().value().is_empty());
+    assert!(!generated_from_documents.word().source_refs().is_empty());
 
     println!("example api walkthrough passed");
     Ok(())

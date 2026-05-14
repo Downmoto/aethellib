@@ -2,16 +2,15 @@
 //!
 //! this module exposes concrete generators that build runtime content
 //! from loaded and validated aethel documents.
-//! generators should expose a convenience `generate()` method and
-//! a deterministic `generate_with_rng(...)` method for reproducible tests.
+//! generation implementations compile reusable candidate state, then expose
+//! inherent methods for runtime sampling.
 pub mod utils;
-pub use crate::generator::utils::{collect_generated_field_candidates};
+pub use crate::generator::utils::{GeneratedFieldBuilder, generated_field_builder};
 
 use std::path::Path;
 use std::{collections::HashMap, hash::Hash};
 
 use rand::Rng;
-use rand::thread_rng;
 
 use crate::AethelCorpus;
 use crate::SourceAethelDoc;
@@ -19,20 +18,52 @@ use crate::loader::TargetedLoader;
 use crate::merger::error::MergerError;
 use crate::merger::merge_files;
 
-/// generic generator contract with shared constructor and generation helpers.
-pub trait Generator: Sized {
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// generation errors for compile and sampling paths.
+pub enum GenerationError {
+    /// generation state must be compiled before sampling.
+    NotCompiled,
+    /// one generated field has no candidates.
+    EmptyCandidates { field: String },
+    /// trace graph shape failed validation.
+    InvalidTraceGraph(String),
+    /// field builder definition is invalid.
+    BuilderDefinition { field: String, reason: String },
+}
+
+impl std::fmt::Display for GenerationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GenerationError::NotCompiled => write!(f, "generation state is not compiled"),
+            GenerationError::EmptyCandidates { field } => {
+                write!(f, "no candidates are available for field '{field}'")
+            }
+            GenerationError::InvalidTraceGraph(message) => write!(f, "invalid trace graph: {message}"),
+            GenerationError::BuilderDefinition { field, reason } => {
+                write!(f, "invalid builder definition for field '{field}': {reason}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for GenerationError {}
+
+/// generic generation contract with shared constructors and compile lifecycle.
+pub trait Generation: Sized {
     /// loader payload type used by this generator target.
     type Loader: TargetedLoader;
-    /// generated output type.
-    type Output: Generated;
+    /// reusable compiled state owned by implementers.
+    type CompiledState;
+    /// error type returned by compile and generation methods.
+    type Error: std::error::Error;
 
-    /// creates a generator from a merged target corpus.
+    /// creates a generation object from a merged target corpus.
     fn new(corpus: AethelCorpus<Self::Loader>) -> Self;
 
-    /// builds one output value using the supplied rng.
-    fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::Output;
+    /// compiles reusable candidate state used by inherent generation methods.
+    fn compile(&mut self) -> Result<(), Self::Error>;
 
-    /// creates a generator directly from source documents.
+    /// creates a generation object directly from source documents.
     fn from_documents(documents: Vec<SourceAethelDoc<Self::Loader>>) -> Self {
         Self::new(AethelCorpus {
             target: <Self::Loader as TargetedLoader>::TARGET.to_string(),
@@ -40,31 +71,10 @@ pub trait Generator: Sized {
         })
     }
 
-    /// loads one target file and creates a corpus-backed generator.
-    fn from_file(path: impl AsRef<Path>) -> Result<Self, MergerError> {
-        let paths = [path];
-        let corpus = merge_files::<Self::Loader>(&paths, None)?;
-        Ok(Self::new(corpus))
-    }
-
-    /// loads target files and creates a corpus-backed generator.
+    /// loads target files and creates a corpus-backed generation object.
     fn from_files(paths: &[impl AsRef<Path>]) -> Result<Self, MergerError> {
         let corpus = merge_files::<Self::Loader>(paths, None)?;
         Ok(Self::new(corpus))
-    }
-
-    /// builds one output by sampling with thread-local randomness.
-    fn generate(&self) -> Self::Output {
-        let mut rng = thread_rng();
-        self.generate_with_rng(&mut rng)
-    }
-}
-
-pub trait Generated: Sized {
-    type Loader: TargetedLoader;
-
-    fn get(&self) {
-        todo!()
     }
 }
 
@@ -88,16 +98,141 @@ impl SourceRef {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// node kind used in field-level dependency graphs.
+pub enum TraceNodeKind {
+    Source,
+    Selection,
+    Transform,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// edge kind used in field-level dependency graphs.
+pub enum TraceEdgeKind {
+    DerivedFrom,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// one trace node in a generated field graph.
+pub struct TraceNode {
+    /// stable node id within one graph.
+    pub id: String,
+    /// semantic node kind.
+    pub kind: TraceNodeKind,
+    /// human-readable node label.
+    pub label: String,
+    /// optional source reference for source nodes.
+    pub source_ref: Option<SourceRef>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// one trace edge in a generated field graph.
+pub struct TraceEdge {
+    /// upstream node id.
+    pub from: String,
+    /// downstream node id.
+    pub to: String,
+    /// semantic edge kind.
+    pub kind: TraceEdgeKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// structured trace graph for one generated field.
+pub struct TraceGraph {
+    nodes: Vec<TraceNode>,
+    edges: Vec<TraceEdge>,
+}
+
+impl TraceGraph {
+    /// creates a graph from node and edge lists.
+    pub fn new(nodes: Vec<TraceNode>, edges: Vec<TraceEdge>) -> Self {
+        Self { nodes, edges }
+    }
+
+    /// returns all nodes.
+    pub fn nodes(&self) -> &[TraceNode] {
+        self.nodes.as_slice()
+    }
+
+    /// returns all edges.
+    pub fn edges(&self) -> &[TraceEdge] {
+        self.edges.as_slice()
+    }
+
+    /// returns true when a node id exists in the graph.
+    pub fn has_node(&self, id: &str) -> bool {
+        self.nodes.iter().any(|node| node.id == id)
+    }
+}
+
 #[derive(Debug, Clone)]
 /// generated field value with aggregated provenance references.
 pub struct GeneratedField<T> {
-    /// selected output value.
-    pub value: T,
-    /// all source refs that can yield this value.
-    pub source_refs: Vec<SourceRef>,
+    value: T,
+    source_refs: Vec<SourceRef>,
+    trace_graph: TraceGraph,
+    trace_root_id: String,
+    field_name: Option<String>,
+    compiled_candidates: Option<GeneratedFieldCandidates<T>>,
 }
 
 impl<T> GeneratedField<T> {
+    /// creates one generated field with validated trace metadata.
+    pub(crate) fn new(
+        value: T,
+        source_refs: Vec<SourceRef>,
+        trace_graph: TraceGraph,
+        trace_root_id: String,
+    ) -> Result<Self, GenerationError> {
+        if !trace_graph.has_node(trace_root_id.as_str()) {
+            return Err(GenerationError::InvalidTraceGraph(format!(
+                "missing root node '{trace_root_id}'"
+            )));
+        }
+
+        Ok(Self {
+            value,
+            source_refs,
+            trace_graph,
+            trace_root_id,
+            field_name: None,
+            compiled_candidates: None,
+        })
+    }
+
+    /// creates a default uncompiled generated field value.
+    pub fn pending(value: T) -> Self {
+        Self {
+            value,
+            source_refs: Vec::new(),
+            trace_graph: TraceGraph::default(),
+            trace_root_id: String::new(),
+            field_name: None,
+            compiled_candidates: None,
+        }
+    }
+
+    /// attaches compiled candidates to this field for self-managed re-sampling.
+    pub fn set_candidates(&mut self, field: impl Into<String>, candidates: GeneratedFieldCandidates<T>) {
+        self.field_name = Some(field.into());
+        self.compiled_candidates = Some(candidates);
+    }
+
+    /// returns true when this field has compiled candidates attached.
+    pub fn is_compiled(&self) -> bool {
+        self.compiled_candidates.is_some()
+    }
+
+    /// returns the selected output value.
+    pub fn value(&self) -> &T {
+        &self.value
+    }
+
+    /// returns all provenance references attached to this value.
+    pub fn source_refs(&self) -> &[SourceRef] {
+        self.source_refs.as_slice()
+    }
+
     /// returns true when provenance contains the given source id.
     pub fn has_source_id(&self, source_id: &str) -> bool {
         self.source_refs
@@ -132,6 +267,61 @@ impl<T> GeneratedField<T> {
 
         source_paths
     }
+
+    /// returns the dependency trace graph for this field.
+    pub fn trace_graph(&self) -> &TraceGraph {
+        &self.trace_graph
+    }
+
+    /// returns the trace root node id for this field.
+    pub fn trace_root_id(&self) -> &str {
+        self.trace_root_id.as_str()
+    }
+
+    /// re-samples this field from its own compiled candidates and returns a new value.
+    pub fn regenerate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Result<Self, GenerationError>
+    where
+        T: Eq + Hash + Clone,
+    {
+        let field = self
+            .field_name
+            .as_deref()
+            .ok_or(GenerationError::NotCompiled)?;
+        let candidates = self
+            .compiled_candidates
+            .as_ref()
+            .ok_or(GenerationError::NotCompiled)?;
+
+        candidates.sample(field, rng)
+    }
+
+    /// re-samples this field from its own compiled candidates using thread-local randomness.
+    pub fn regenerate(&self) -> Result<Self, GenerationError>
+    where
+        T: Eq + Hash + Clone,
+    {
+        let mut rng = rand::thread_rng();
+        self.regenerate_with_rng(&mut rng)
+    }
+
+    /// re-samples this field in place from its own compiled candidates.
+    pub fn regenerate_in_place_with_rng<R: Rng + ?Sized>(&mut self, rng: &mut R) -> Result<(), GenerationError>
+    where
+        T: Eq + Hash + Clone,
+    {
+        let next_value = self.regenerate_with_rng(rng)?;
+        *self = next_value;
+        Ok(())
+    }
+
+    /// re-samples this field in place using thread-local randomness.
+    pub fn regenerate_in_place(&mut self) -> Result<(), GenerationError>
+    where
+        T: Eq + Hash + Clone,
+    {
+        let mut rng = rand::thread_rng();
+        self.regenerate_in_place_with_rng(&mut rng)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -148,8 +338,21 @@ where
     T: Eq + Hash + Clone,
 {
     /// samples one generated field using the prepared values and provenance.
-    pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Option<GeneratedField<T>> {
-        utils::sample_generated_field(&self.values, &self.provenance, rng)
+    pub fn sample<R: Rng + ?Sized>(
+        &self,
+        field: &str,
+        rng: &mut R,
+    ) -> Result<GeneratedField<T>, GenerationError> {
+        let mut generated_field = utils::sample_generated_field(&self.values, &self.provenance, rng)
+            .map_err(|error| match error {
+                GenerationError::EmptyCandidates { .. } => GenerationError::EmptyCandidates {
+                    field: field.to_string(),
+                },
+                _ => error,
+            })?;
+
+        generated_field.set_candidates(field.to_string(), self.clone());
+        Ok(generated_field)
     }
 }
 

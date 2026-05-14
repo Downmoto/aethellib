@@ -7,7 +7,7 @@ the api may change between minor releases while architecture settles.
 
 ## status
 
-- current crate version: 0.3.x
+- current crate version: 0.5.0
 - release stability target: 1.0.0
 - this readme is intentionally minimal until 1.0
 
@@ -17,7 +17,7 @@ aethellib is now focused on reusable primitives for building your own target loa
 
 - typed document loading and target validation
 - single-target corpus merging with source provenance metadata
-- generator trait surface for runtime generation workflows
+- generation trait surface for runtime generation workflows
 
 it does not aim to be a mixed-target orchestration framework.
 if you need mixed-target handling, do that grouping and dispatch in your own binary or library layer.
@@ -69,9 +69,11 @@ let corpus = merge_files::<MyLoader>(&paths, None)?;
 for up-to-date usage, run and read:
 
 - [examples/test.rs](examples/test.rs)
+- [examples/generation_0_5.rs](examples/generation_0_5.rs)
 
 ```bash
 cargo run --example test
+cargo run --example generation_0_5
 ```
 
 ## development
