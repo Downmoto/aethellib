@@ -5,7 +5,7 @@ use crate::{
     AethelCorpus,
     generator::{
         GeneratedField, GeneratedFieldCandidates, GenerationError, ProvenanceCandidateIndex,
-        SourceRef, TraceEdge, TraceEdgeKind, TraceGraph, TraceNode, TraceNodeKind,
+        SourceRef,
     },
 };
 
@@ -61,33 +61,6 @@ where
     let picked_index = rng.gen_range(0..values.len());
     let value = values[picked_index].clone();
     let source_refs = index.refs_for(&value).to_vec();
-    let root_id = "selection:0".to_string();
 
-    let mut nodes: Vec<TraceNode> = Vec::new();
-    nodes.push(TraceNode {
-        id: root_id.clone(),
-        kind: TraceNodeKind::Selection,
-        label: "sample selection".to_string(),
-        source_ref: None,
-    });
-
-    let mut edges: Vec<TraceEdge> = Vec::new();
-    for (idx, source_ref) in source_refs.iter().enumerate() {
-        let source_node_id = format!("source:{idx}");
-        nodes.push(TraceNode {
-            id: source_node_id.clone(),
-            kind: TraceNodeKind::Source,
-            label: source_ref.source_name.clone(),
-            source_ref: Some(source_ref.clone()),
-        });
-        edges.push(TraceEdge {
-            from: source_node_id,
-            to: root_id.clone(),
-            kind: TraceEdgeKind::DerivedFrom,
-        });
-    }
-
-    let trace_graph = TraceGraph::new(nodes, edges);
-
-    GeneratedField::new(value, source_refs, trace_graph, root_id)
+    GeneratedField::new(value, source_refs)
 }

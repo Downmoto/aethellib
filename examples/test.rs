@@ -292,6 +292,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // verify direct constructor path and deterministic generation.
     let from_compiled = ExampleGeneration::compile(corpus_from_sources.clone())?;
+    let compiled_options = from_compiled.word().all_options()?;
+    assert!(!compiled_options.is_empty());
+
+    let pending_word: GeneratedField<String> = GeneratedField::pending(String::new());
+    assert!(matches!(
+        pending_word.all_options(),
+        Err(GenerationError::NotCompiled)
+    ));
+
     let mut seeded_rng = rand::rngs::StdRng::seed_from_u64(7);
     let seeded_value = from_compiled.generate_with_rng(&mut seeded_rng)?;
     assert!(!seeded_value.word().value().is_empty());
@@ -317,7 +326,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             .source_paths_in(&corpus_from_sources)
             .is_empty()
     );
-    assert!(!generated_field.word().trace_graph().nodes().is_empty());
 
     // verify file-backed constructor convenience.
     let from_file_generator = ExampleGeneration::from_files(&[alpha_path.as_str()])?;

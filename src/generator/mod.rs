@@ -25,8 +25,6 @@ pub enum GenerationError {
     NotCompiled,
     /// one generated field has no candidates.
     EmptyCandidates { field: String },
-    /// trace graph shape failed validation.
-    InvalidTraceGraph(String),
     /// field builder definition is invalid.
     BuilderDefinition { field: String, reason: String },
 }
@@ -37,9 +35,6 @@ impl std::fmt::Display for GenerationError {
             GenerationError::NotCompiled => write!(f, "generation state is not compiled"),
             GenerationError::EmptyCandidates { field } => {
                 write!(f, "no candidates are available for field '{field}'")
-            }
-            GenerationError::InvalidTraceGraph(message) => {
-                write!(f, "invalid trace graph: {message}")
             }
             GenerationError::BuilderDefinition { field, reason } => {
                 write!(
@@ -109,103 +104,21 @@ impl SourceRef {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// node kind used in field-level dependency graphs.
-pub enum TraceNodeKind {
-    Source,
-    Selection,
-    Transform,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// edge kind used in field-level dependency graphs.
-pub enum TraceEdgeKind {
-    DerivedFrom,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// one trace node in a generated field graph.
-pub struct TraceNode {
-    /// stable node id within one graph.
-    pub id: String,
-    /// semantic node kind.
-    pub kind: TraceNodeKind,
-    /// human-readable node label.
-    pub label: String,
-    /// optional source reference for source nodes.
-    pub source_ref: Option<SourceRef>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// one trace edge in a generated field graph.
-pub struct TraceEdge {
-    /// upstream node id.
-    pub from: String,
-    /// downstream node id.
-    pub to: String,
-    /// semantic edge kind.
-    pub kind: TraceEdgeKind,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-/// structured trace graph for one generated field.
-pub struct TraceGraph {
-    nodes: Vec<TraceNode>,
-    edges: Vec<TraceEdge>,
-}
-
-impl TraceGraph {
-    /// creates a graph from node and edge lists.
-    pub fn new(nodes: Vec<TraceNode>, edges: Vec<TraceEdge>) -> Self {
-        Self { nodes, edges }
-    }
-
-    /// returns all nodes.
-    pub fn nodes(&self) -> &[TraceNode] {
-        self.nodes.as_slice()
-    }
-
-    /// returns all edges.
-    pub fn edges(&self) -> &[TraceEdge] {
-        self.edges.as_slice()
-    }
-
-    /// returns true when a node id exists in the graph.
-    pub fn has_node(&self, id: &str) -> bool {
-        self.nodes.iter().any(|node| node.id == id)
-    }
-}
-
 #[derive(Debug, Clone)]
 /// generated field value with aggregated provenance references.
 pub struct GeneratedField<T> {
     value: T,
     source_refs: Vec<SourceRef>,
-    trace_graph: TraceGraph,
-    trace_root_id: String,
     field_name: Option<String>,
     compiled_candidates: Option<GeneratedFieldCandidates<T>>,
 }
 
 impl<T> GeneratedField<T> {
-    /// creates one generated field with validated trace metadata.
-    pub(crate) fn new(
-        value: T,
-        source_refs: Vec<SourceRef>,
-        trace_graph: TraceGraph,
-        trace_root_id: String,
-    ) -> Result<Self, GenerationError> {
-        if !trace_graph.has_node(trace_root_id.as_str()) {
-            return Err(GenerationError::InvalidTraceGraph(format!(
-                "missing root node '{trace_root_id}'"
-            )));
-        }
-
+    /// creates one generated field with attached provenance metadata.
+    pub(crate) fn new(value: T, source_refs: Vec<SourceRef>) -> Result<Self, GenerationError> {
         Ok(Self {
             value,
             source_refs,
-            trace_graph,
-            trace_root_id,
             field_name: None,
             compiled_candidates: None,
         })
@@ -216,8 +129,6 @@ impl<T> GeneratedField<T> {
         Self {
             value,
             source_refs: Vec::new(),
-            trace_graph: TraceGraph::default(),
-            trace_root_id: String::new(),
             field_name: None,
             compiled_candidates: None,
         }
@@ -236,6 +147,19 @@ impl<T> GeneratedField<T> {
     /// returns true when this field has compiled candidates attached.
     pub fn is_compiled(&self) -> bool {
         self.compiled_candidates.is_some()
+    }
+
+    /// returns all candidate options attached to this field.
+    pub fn all_options(&self) -> Result<Vec<T>, GenerationError>
+    where
+        T: Clone,
+    {
+        let candidates = self
+            .compiled_candidates
+            .as_ref()
+            .ok_or(GenerationError::NotCompiled)?;
+
+        Ok(candidates.values.clone())
     }
 
     /// returns the selected output value.
@@ -281,16 +205,6 @@ impl<T> GeneratedField<T> {
         }
 
         source_paths
-    }
-
-    /// returns the dependency trace graph for this field.
-    pub fn trace_graph(&self) -> &TraceGraph {
-        &self.trace_graph
-    }
-
-    /// returns the trace root node id for this field.
-    pub fn trace_root_id(&self) -> &str {
-        self.trace_root_id.as_str()
     }
 
     /// re-samples this field from its own compiled candidates and returns a new value.

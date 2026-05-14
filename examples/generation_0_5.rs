@@ -8,7 +8,7 @@
 //! 2) define one generation struct composed only of `GeneratedField<T>` values
 //! 3) attach field-local candidates in `Generation::compile(corpus)`
 //! 5) generate full profiles and selectively reroll subsets
-//! 6) print value, provenance refs, and trace graph details
+//! 6) print value and provenance refs
 
 use std::error::Error;
 
@@ -460,6 +460,441 @@ fn main() -> Result<(), Box<dyn Error>> {
                 },
             },
         },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "highland annals 2".to_string(),
+                target: "demo".to_string(),
+                desc: Some("old houses of the northern spine".to_string()),
+                author: Some("scribe anwyn".to_string()),
+                version: Some("2.1".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["archon".to_string(), "warden".to_string()],
+                    first_names: vec!["alder".to_string(), "brynn".to_string(), "cael".to_string()],
+                    middle_names: vec![
+                        "vale".to_string(),
+                        "thorn".to_string(),
+                        "rowan".to_string(),
+                    ],
+                    last_names: vec!["blackmere".to_string(), "stormglass".to_string()],
+                    suffixes: vec!["of dawn".to_string(), "of stone".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec!["the oathbound".to_string(), "the ember-witness".to_string()],
+                    dynasties: vec!["house gryph".to_string(), "house cindervale".to_string()],
+                    eras: vec![
+                        "third lantern age".to_string(),
+                        "fracture reign".to_string(),
+                    ],
+                    omens: vec![
+                        "ashen rain at noon".to_string(),
+                        "silver crows in spiral".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "border cartographer".to_string(),
+                        "ritual engineer".to_string(),
+                    ],
+                    homelands: vec!["northreach terraces".to_string(), "glassfjord".to_string()],
+                    relics: vec![
+                        "compass of nine tides".to_string(),
+                        "obsidian treaty seal".to_string(),
+                    ],
+                },
+            },
+        },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "river court ledger 2".to_string(),
+                target: "demo".to_string(),
+                desc: Some("bloodlines and civic vows of the southern deltas".to_string()),
+                author: Some("clerk mirel".to_string()),
+                version: Some("1.4".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["magistrate".to_string(), "legate".to_string()],
+                    first_names: vec![
+                        "darian".to_string(),
+                        "elowen".to_string(),
+                        "fenn".to_string(),
+                    ],
+                    middle_names: vec![
+                        "quill".to_string(),
+                        "marsh".to_string(),
+                        "tide".to_string(),
+                    ],
+                    last_names: vec!["reedmarch".to_string(), "halcyon".to_string()],
+                    suffixes: vec!["of mist".to_string(), "of flame".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec![
+                        "the flood-scribe".to_string(),
+                        "the gate-keeper".to_string(),
+                    ],
+                    dynasties: vec!["house delta".to_string(), "house palewater".to_string()],
+                    eras: vec!["concord cycle".to_string(), "river partition".to_string()],
+                    omens: vec![
+                        "mirrorfish breaching at dusk".to_string(),
+                        "violet foam on the weir".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "charter advocate".to_string(),
+                        "bridge tactician".to_string(),
+                    ],
+                    homelands: vec!["low delta bastions".to_string(), "brinecourt".to_string()],
+                    relics: vec![
+                        "salt-etched decree blade".to_string(),
+                        "ledger of drowned crowns".to_string(),
+                    ],
+                },
+            },
+        },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "sunken observatory archive 2".to_string(),
+                target: "demo".to_string(),
+                desc: Some("deep vault records from the western trench".to_string()),
+                author: Some("custodian irys".to_string()),
+                version: Some("0.9".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["prefect".to_string(), "oracle".to_string()],
+                    first_names: vec!["galen".to_string(), "heli".to_string(), "iora".to_string()],
+                    middle_names: vec![
+                        "hollow".to_string(),
+                        "echo".to_string(),
+                        "lumen".to_string(),
+                    ],
+                    last_names: vec!["deepwake".to_string(), "starbreak".to_string()],
+                    suffixes: vec!["of tides".to_string(), "of embers".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec![
+                        "the trench-eyed".to_string(),
+                        "the patient flame".to_string(),
+                    ],
+                    dynasties: vec!["house meridian".to_string(), "house undertorch".to_string()],
+                    eras: vec![
+                        "seventh eclipse".to_string(),
+                        "bell of red winter".to_string(),
+                    ],
+                    omens: vec![
+                        "a silent aurora beneath the surf".to_string(),
+                        "ink tides rising uphill".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "abyssal archivist".to_string(),
+                        "signal alchemist".to_string(),
+                    ],
+                    homelands: vec![
+                        "sunken meridian".to_string(),
+                        "the brass trench".to_string(),
+                    ],
+                    relics: vec![
+                        "astrolabe of drowned noon".to_string(),
+                        "vacuum pearl reliquary".to_string(),
+                    ],
+                },
+            },
+        },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "highland annals 3".to_string(),
+                target: "demo".to_string(),
+                desc: Some("old houses of the northern spine".to_string()),
+                author: Some("scribe anwyn".to_string()),
+                version: Some("2.1".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["archon".to_string(), "warden".to_string()],
+                    first_names: vec!["alder".to_string(), "brynn".to_string(), "cael".to_string()],
+                    middle_names: vec![
+                        "vale".to_string(),
+                        "thorn".to_string(),
+                        "rowan".to_string(),
+                    ],
+                    last_names: vec!["blackmere".to_string(), "stormglass".to_string()],
+                    suffixes: vec!["of dawn".to_string(), "of stone".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec!["the oathbound".to_string(), "the ember-witness".to_string()],
+                    dynasties: vec!["house gryph".to_string(), "house cindervale".to_string()],
+                    eras: vec![
+                        "third lantern age".to_string(),
+                        "fracture reign".to_string(),
+                    ],
+                    omens: vec![
+                        "ashen rain at noon".to_string(),
+                        "silver crows in spiral".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "border cartographer".to_string(),
+                        "ritual engineer".to_string(),
+                    ],
+                    homelands: vec!["northreach terraces".to_string(), "glassfjord".to_string()],
+                    relics: vec![
+                        "compass of nine tides".to_string(),
+                        "obsidian treaty seal".to_string(),
+                    ],
+                },
+            },
+        },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "river court ledger 3".to_string(),
+                target: "demo".to_string(),
+                desc: Some("bloodlines and civic vows of the southern deltas".to_string()),
+                author: Some("clerk mirel".to_string()),
+                version: Some("1.4".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["magistrate".to_string(), "legate".to_string()],
+                    first_names: vec![
+                        "darian".to_string(),
+                        "elowen".to_string(),
+                        "fenn".to_string(),
+                    ],
+                    middle_names: vec![
+                        "quill".to_string(),
+                        "marsh".to_string(),
+                        "tide".to_string(),
+                    ],
+                    last_names: vec!["reedmarch".to_string(), "halcyon".to_string()],
+                    suffixes: vec!["of mist".to_string(), "of flame".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec![
+                        "the flood-scribe".to_string(),
+                        "the gate-keeper".to_string(),
+                    ],
+                    dynasties: vec!["house delta".to_string(), "house palewater".to_string()],
+                    eras: vec!["concord cycle".to_string(), "river partition".to_string()],
+                    omens: vec![
+                        "mirrorfish breaching at dusk".to_string(),
+                        "violet foam on the weir".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "charter advocate".to_string(),
+                        "bridge tactician".to_string(),
+                    ],
+                    homelands: vec!["low delta bastions".to_string(), "brinecourt".to_string()],
+                    relics: vec![
+                        "salt-etched decree blade".to_string(),
+                        "ledger of drowned crowns".to_string(),
+                    ],
+                },
+            },
+        },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "sunken observatory archive 3".to_string(),
+                target: "demo".to_string(),
+                desc: Some("deep vault records from the western trench".to_string()),
+                author: Some("custodian irys".to_string()),
+                version: Some("0.9".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["prefect".to_string(), "oracle".to_string()],
+                    first_names: vec!["galen".to_string(), "heli".to_string(), "iora".to_string()],
+                    middle_names: vec![
+                        "hollow".to_string(),
+                        "echo".to_string(),
+                        "lumen".to_string(),
+                    ],
+                    last_names: vec!["deepwake".to_string(), "starbreak".to_string()],
+                    suffixes: vec!["of tides".to_string(), "of embers".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec![
+                        "the trench-eyed".to_string(),
+                        "the patient flame".to_string(),
+                    ],
+                    dynasties: vec!["house meridian".to_string(), "house undertorch".to_string()],
+                    eras: vec![
+                        "seventh eclipse".to_string(),
+                        "bell of red winter".to_string(),
+                    ],
+                    omens: vec![
+                        "a silent aurora beneath the surf".to_string(),
+                        "ink tides rising uphill".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "abyssal archivist".to_string(),
+                        "signal alchemist".to_string(),
+                    ],
+                    homelands: vec![
+                        "sunken meridian".to_string(),
+                        "the brass trench".to_string(),
+                    ],
+                    relics: vec![
+                        "astrolabe of drowned noon".to_string(),
+                        "vacuum pearl reliquary".to_string(),
+                    ],
+                },
+            },
+        },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "highland annals 4".to_string(),
+                target: "demo".to_string(),
+                desc: Some("old houses of the northern spine".to_string()),
+                author: Some("scribe anwyn".to_string()),
+                version: Some("2.1".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["archon".to_string(), "warden".to_string()],
+                    first_names: vec!["alder".to_string(), "brynn".to_string(), "cael".to_string()],
+                    middle_names: vec![
+                        "vale".to_string(),
+                        "thorn".to_string(),
+                        "rowan".to_string(),
+                    ],
+                    last_names: vec!["blackmere".to_string(), "stormglass".to_string()],
+                    suffixes: vec!["of dawn".to_string(), "of stone".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec!["the oathbound".to_string(), "the ember-witness".to_string()],
+                    dynasties: vec!["house gryph".to_string(), "house cindervale".to_string()],
+                    eras: vec![
+                        "third lantern age".to_string(),
+                        "fracture reign".to_string(),
+                    ],
+                    omens: vec![
+                        "ashen rain at noon".to_string(),
+                        "silver crows in spiral".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "border cartographer".to_string(),
+                        "ritual engineer".to_string(),
+                    ],
+                    homelands: vec!["northreach terraces".to_string(), "glassfjord".to_string()],
+                    relics: vec![
+                        "compass of nine tides".to_string(),
+                        "obsidian treaty seal".to_string(),
+                    ],
+                },
+            },
+        },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "river court ledger 4".to_string(),
+                target: "demo".to_string(),
+                desc: Some("bloodlines and civic vows of the southern deltas".to_string()),
+                author: Some("clerk mirel".to_string()),
+                version: Some("1.4".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["magistrate".to_string(), "legate".to_string()],
+                    first_names: vec![
+                        "darian".to_string(),
+                        "elowen".to_string(),
+                        "fenn".to_string(),
+                    ],
+                    middle_names: vec![
+                        "quill".to_string(),
+                        "marsh".to_string(),
+                        "tide".to_string(),
+                    ],
+                    last_names: vec!["reedmarch".to_string(), "halcyon".to_string()],
+                    suffixes: vec!["of mist".to_string(), "of flame".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec![
+                        "the flood-scribe".to_string(),
+                        "the gate-keeper".to_string(),
+                    ],
+                    dynasties: vec!["house delta".to_string(), "house palewater".to_string()],
+                    eras: vec!["concord cycle".to_string(), "river partition".to_string()],
+                    omens: vec![
+                        "mirrorfish breaching at dusk".to_string(),
+                        "violet foam on the weir".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "charter advocate".to_string(),
+                        "bridge tactician".to_string(),
+                    ],
+                    homelands: vec!["low delta bastions".to_string(), "brinecourt".to_string()],
+                    relics: vec![
+                        "salt-etched decree blade".to_string(),
+                        "ledger of drowned crowns".to_string(),
+                    ],
+                },
+            },
+        },
+        AethelDoc {
+            header: AethelDocHeader {
+                title: "sunken observatory archive 4".to_string(),
+                target: "demo".to_string(),
+                desc: Some("deep vault records from the western trench".to_string()),
+                author: Some("custodian irys".to_string()),
+                version: Some("0.9".to_string()),
+            },
+            data: DemoLoader {
+                identity: IdentityValues {
+                    titles: vec!["prefect".to_string(), "oracle".to_string()],
+                    first_names: vec!["galen".to_string(), "heli".to_string(), "iora".to_string()],
+                    middle_names: vec![
+                        "hollow".to_string(),
+                        "echo".to_string(),
+                        "lumen".to_string(),
+                    ],
+                    last_names: vec!["deepwake".to_string(), "starbreak".to_string()],
+                    suffixes: vec!["of tides".to_string(), "of embers".to_string()],
+                },
+                lore: LoreValues {
+                    epithets: vec![
+                        "the trench-eyed".to_string(),
+                        "the patient flame".to_string(),
+                    ],
+                    dynasties: vec!["house meridian".to_string(), "house undertorch".to_string()],
+                    eras: vec![
+                        "seventh eclipse".to_string(),
+                        "bell of red winter".to_string(),
+                    ],
+                    omens: vec![
+                        "a silent aurora beneath the surf".to_string(),
+                        "ink tides rising uphill".to_string(),
+                    ],
+                },
+                world: WorldValues {
+                    vocations: vec![
+                        "abyssal archivist".to_string(),
+                        "signal alchemist".to_string(),
+                    ],
+                    homelands: vec![
+                        "sunken meridian".to_string(),
+                        "the brass trench".to_string(),
+                    ],
+                    relics: vec![
+                        "astrolabe of drowned noon".to_string(),
+                        "vacuum pearl reliquary".to_string(),
+                    ],
+                },
+            },
+        },
     ];
 
     let source_docs = SourceAethelDoc::from_aetheldocs(documents)?;
@@ -526,7 +961,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     sampled.name.regenerate_in_place()?;
     println!("name before in-place regenerate: {name_before_in_place}");
     println!("name after in-place regenerate: {}", sampled.name().value());
-
+    dbg!("\nall name() options: {}", sampled.name().all_options().unwrap());
 
     Ok(())
 }
@@ -545,34 +980,15 @@ fn print_profile(generation: &DemoGeneration) {
     println!("omen: {}", generation.omen().value());
 }
 
-/// prints value-level provenance and trace graph edges for one generated field.
+/// prints value-level provenance for one generated field.
 fn print_field_provenance(label: &str, field: &GeneratedField<String>) {
     println!("\n[{label}] {}", field.value());
     println!("source ids: {:?}", field.source_ids());
     for source_ref in field.source_refs() {
         println!(
-            "  source: {} | {}.{} | id={} | title={} ",
-            source_ref.source_name,
-            source_ref.section,
-            source_ref.field,
-            source_ref.source_id,
-            source_ref.source_name,
+            "  source: {} | {}.{}  ",
+            source_ref.source_name, source_ref.section, source_ref.field,
         );
     }
 
-    println!("trace root: {}", field.trace_root_id());
-    for node in field.trace_graph().nodes() {
-        if let Some(source_ref) = &node.source_ref {
-            println!(
-                "  node {} {:?} '{}' -> {}.{}",
-                node.id, node.kind, node.label, source_ref.section, source_ref.field,
-            );
-        } else {
-            println!("  node {} {:?} '{}'", node.id, node.kind, node.label);
-        }
-    }
-
-    for edge in field.trace_graph().edges() {
-        println!("  edge {} -> {} ({:?})", edge.from, edge.to, edge.kind);
-    }
 }

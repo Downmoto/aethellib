@@ -13,7 +13,6 @@ it describes the current 0.5.1 generator architecture in implementation order, n
 - lifecycle contract (`Generation` trait)
 - field abstraction (`GeneratedField<T>`) with owned candidate state
 - provenance metadata (`SourceRef`)
-- trace graph model (`TraceGraph`, `TraceNode`, `TraceEdge`)
 - candidate/index primitives (`GeneratedFieldCandidates<T>`, `ProvenanceCandidateIndex<T>`)
 - generation errors (`GenerationError`)
 
@@ -32,7 +31,7 @@ current flow from source docs to runtime value:
 4. each field receives its compiled state via `set_candidates(field_name, candidates)`.
 5. `compile(corpus)` validates required fields while constructing `Self`.
 6. runtime generation calls field-level `regenerate_*` methods.
-7. each sample returns value + source refs + trace graph.
+7. each sample returns value + source refs.
 
 important: candidate ownership is field-local by design.
 this enables selective re-sampling without external candidate wiring.
@@ -61,7 +60,6 @@ design note:
 
 - `NotCompiled`
 - `EmptyCandidates { field }`
-- `InvalidTraceGraph(String)`
 - `BuilderDefinition { field, reason }`
 
 guideline:
@@ -93,34 +91,13 @@ maps candidate value -> source refs:
 invariant:
 - for each value key, source refs are de-duplicated with first-seen ordering.
 
-## 6. trace graph model
-
-`TraceGraph` stores dependency structure for a sampled value.
-
-current model:
-
-- node kinds: `Source`, `Selection`, `Transform`
-- edge kind: `DerivedFrom`
-- root is `trace_root_id` on the field
-
-sampling currently builds a minimal graph:
-
-- one selection node (`selection:0`)
-- one source node per source ref
-- derived edges from source nodes to selection node
-
-validation:
-- `GeneratedField::new(...)` requires root node id to exist in the graph.
-
-## 7. field abstraction (`GeneratedField<T>`)
+## 6. field abstraction (`GeneratedField<T>`)
 
 `GeneratedField<T>` contains both output and local generation state:
 
 - sampled output:
   - `value`
   - `source_refs`
-  - `trace_graph`
-  - `trace_root_id`
 - attached compile state for self-managed re-sampling:
   - `field_name: Option<String>`
   - `compiled_candidates: Option<GeneratedFieldCandidates<T>>`
@@ -129,7 +106,6 @@ public responsibilities:
 
 - accessors:
   - `value()`, `source_refs()`, `source_ids()`, `source_paths_in(...)`
-  - `trace_graph()`, `trace_root_id()`
 - compile-state management:
   - `set_candidates(...)`, `is_compiled()`
 - sampling control:
@@ -140,7 +116,7 @@ critical behaviour:
 - `regenerate_*` fails with `NotCompiled` if field candidates are not attached.
 - `GeneratedFieldCandidates::sample(...)` re-attaches candidate state to the returned field, preserving future re-sampling capability.
 
-## 8. candidate container (`GeneratedFieldCandidates<T>`)
+## 7. candidate container (`GeneratedFieldCandidates<T>`)
 
 `GeneratedFieldCandidates<T>` holds:
 
@@ -153,11 +129,10 @@ sampling API:
 sampling responsibilities:
 - produce a sampled `value`.
 - attach source refs for that value.
-- build trace graph payload.
 - map empty candidate failures to field-scoped errors.
 - attach candidate state into returned field.
 
-## 9. candidate utilities (`utils.rs`)
+## 8. candidate utilities (`utils.rs`)
 
 `generated_field_builder(corpus, section, field, extract_values)` returns `GeneratedFieldCandidates<T>` directly:
 
@@ -169,7 +144,7 @@ sampling responsibilities:
 guideline:
 - use candidate helpers in `Generation::compile(...)` to keep extraction logic local and explicit.
 
-## 10. implementation recipe for new generation types
+## 9. implementation recipe for new generation types
 
 when adding a new internal generation type:
 
@@ -184,34 +159,30 @@ when adding a new internal generation type:
    - call per-field `regenerate_*` methods.
    - support selective reroll methods for lockable fields.
 
-## 11. invariants to preserve
+## 10. invariants to preserve
 
 do not break these without coordinated migration:
 
-- sampled field must have a valid trace root in trace graph.
 - re-sampled fields must retain attached candidates for future rerolls.
 - source ref de-duplication order is stable (first-seen).
 - errors should remain field-scoped where possible.
 - field-level resampling must not require external candidate passing.
 
-## 12. known limitations (0.5.1)
+## 11. known limitations (0.5.1)
 
 - `Generation::CompiledState` is present but not strongly integrated into the runtime shape.
-- trace graph is currently shallow (selection + source nodes only).
 - no built-in helper yet for aggregated provenance across composed fields (for example full-name composition).
 - no module-level unit tests for generator internals yet; behaviour is mostly example-driven.
 
-## 13. recommended next internal tasks
+## 12. recommended next internal tasks
 
 1. add dedicated unit tests under `src/generator` for:
    - `GeneratedField::regenerate_*`
    - candidate attachment persistence
-   - trace graph validity checks
 2. add composed-provenance helper APIs for multi-field derived strings.
-3. formalize stable node id strategy for trace graphs.
-4. decide whether `Generation::CompiledState` should become an enforced field-level abstraction or be removed.
+3. decide whether `Generation::CompiledState` should become an enforced field-level abstraction or be removed.
 
-## 14. file map
+## 13. file map
 
 - core contract/types: `src/generator/mod.rs`
 - build and sample helpers: `src/generator/utils.rs`
