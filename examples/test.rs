@@ -9,7 +9,7 @@
 //! - typed single-target merging and merge option handling
 //! - source document conversion helpers
 //! - provenance indexing and generated field helpers
-//! - generation constructors (`new`, `from_file`, `from_files`, `from_documents`)
+//! - generation constructors (`compile`, `from_files`, `from_documents`)
 //! - deterministic generation via seeded rng with result-based errors
 //!
 //! fixtures are created under `target/` and removed automatically at exit.
@@ -78,23 +78,13 @@ struct ExampleValues {
 
 struct ExampleGeneration {
     word: GeneratedField<String>,
-    // prepared candidates let `new` stay small even as generated fields grow.
-    generated_field: Option<GeneratedFieldCandidates<String>>,
 }
 
 impl ExampleGeneration {
     fn generate_with_rng<R: Rng + ?Sized>(&self, rng: &mut R) -> Result<Self, GenerationError> {
         // generated output is provenance-rich by default in this example.
-        let generated_field = self
-            .generated_field
-            .as_ref()
-            .ok_or(GenerationError::NotCompiled)?;
-        let word = generated_field.sample("word", rng)?;
-
-        Ok(Self {
-            word,
-            generated_field: self.generated_field.clone(),
-        })
+        let word = self.word.regenerate_with_rng(rng)?;
+        Ok(Self { word })
     }
 
     fn generate(&self) -> Result<Self, GenerationError> {
@@ -110,30 +100,25 @@ impl ExampleGeneration {
 impl Generation for ExampleGeneration {
     type Loader = ExampleLoader;
     type CompiledState = GeneratedFieldCandidates<String>;
-    type Error = GenerationError;
 
-    fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
-        // the builder compiles both candidate values and provenance refs.
+    fn compile(corpus: AethelCorpus<Self::Loader>) -> Result<Self, GenerationError> {
+        // candidate values and provenance refs are attached directly to the field.
         let generated_field = generated_field_builder(&corpus, "values", "words", |loader| {
             loader.values.words.clone()
-        })
-        .build();
+        });
 
-        Self {
-            word: GeneratedField::pending(String::new()),
-            generated_field: Some(generated_field),
-        }
-    }
+        let mut word = GeneratedField::pending(String::new());
+        word.set_candidates("word", generated_field);
+        let generation = Self { word };
 
-    fn compile(&mut self) -> Result<(), Self::Error> {
-        if self.generated_field.is_none() {
+        if !generation.word.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "word".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        Ok(())
+        Ok(generation)
     }
 }
 
@@ -307,16 +292,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert!(!candidate_index.refs_for(&"manual".to_string()).is_empty());
 
     // verify direct constructor path and deterministic generation.
-    let mut from_new = ExampleGeneration::new(corpus_from_sources.clone());
-    from_new.compile()?;
+    let from_compiled = ExampleGeneration::compile(corpus_from_sources.clone())?;
     let mut seeded_rng = rand::rngs::StdRng::seed_from_u64(7);
-    let seeded_value = from_new.generate_with_rng(&mut seeded_rng)?;
+    let seeded_value = from_compiled.generate_with_rng(&mut seeded_rng)?;
     assert!(!seeded_value.word().value().is_empty());
     assert!(!seeded_value.word().source_refs().is_empty());
 
     // verify provenance convenience helpers on generated output.
     let mut provenance_rng = rand::rngs::StdRng::seed_from_u64(11);
-    let generated_field = from_new.generate_with_rng(&mut provenance_rng)?;
+    let generated_field = from_compiled.generate_with_rng(&mut provenance_rng)?;
     assert!(!generated_field.word().value().is_empty());
     assert!(!generated_field.word().source_refs().is_empty());
     assert_eq!(
@@ -343,25 +327,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert!(!generated_field.word().trace_graph().nodes().is_empty());
 
     // verify file-backed constructor convenience.
-    let mut from_file_generator = ExampleGeneration::from_files(&[alpha_path.as_str()])?;
-    from_file_generator.compile()?;
+    let from_file_generator = ExampleGeneration::from_files(&[alpha_path.as_str()])?;
     let generated_from_file = from_file_generator.generate()?;
     assert!(!generated_from_file.word().value().is_empty());
     assert!(!generated_from_file.word().source_refs().is_empty());
 
     // verify multi-file constructor convenience.
-    let mut from_files_generator = ExampleGeneration::from_files(&merge_paths)?;
-    from_files_generator.compile()?;
+    let from_files_generator = ExampleGeneration::from_files(&merge_paths)?;
     let generated_from_files = from_files_generator.generate()?;
     assert!(!generated_from_files.word().value().is_empty());
     assert!(!generated_from_files.word().source_refs().is_empty());
 
     // verify source-document constructor convenience.
-    let mut from_documents_generator = ExampleGeneration::from_documents(vec![
+    let from_documents_generator = ExampleGeneration::from_documents(vec![
         source_single,
         source_many.into_iter().next().ok_or("missing source doc")?,
-    ]);
-    from_documents_generator.compile()?;
+    ])?;
     let generated_from_documents = from_documents_generator.generate()?;
     assert!(!generated_from_documents.word().value().is_empty());
     assert!(!generated_from_documents.word().source_refs().is_empty());

@@ -5,7 +5,7 @@
 //! generation implementations compile reusable candidate state, then expose
 //! inherent methods for runtime sampling.
 pub mod utils;
-pub use crate::generator::utils::{GeneratedFieldBuilder, generated_field_builder};
+pub use crate::generator::utils::generated_field_builder;
 
 use std::path::Path;
 use std::{collections::HashMap, hash::Hash};
@@ -48,33 +48,37 @@ impl std::fmt::Display for GenerationError {
 
 impl std::error::Error for GenerationError {}
 
+impl From<MergerError> for GenerationError {
+    fn from(value: MergerError) -> Self {
+        GenerationError::BuilderDefinition {
+            field: "corpus".to_string(),
+            reason: value.to_string(),
+        }
+    }
+}
+
 /// generic generation contract with shared constructors and compile lifecycle.
 pub trait Generation: Sized {
     /// loader payload type used by this generator target.
     type Loader: TargetedLoader;
     /// reusable compiled state owned by implementers.
     type CompiledState;
-    /// error type returned by compile and generation methods.
-    type Error: std::error::Error;
 
-    /// creates a generation object from a merged target corpus.
-    fn new(corpus: AethelCorpus<Self::Loader>) -> Self;
-
-    /// compiles reusable candidate state used by inherent generation methods.
-    fn compile(&mut self) -> Result<(), Self::Error>;
+    /// compiles a generation object from a merged target corpus.
+    fn compile(corpus: AethelCorpus<Self::Loader>) -> Result<Self, GenerationError>;
 
     /// creates a generation object directly from source documents.
-    fn from_documents(documents: Vec<SourceAethelDoc<Self::Loader>>) -> Self {
-        Self::new(AethelCorpus {
+    fn from_documents(documents: Vec<SourceAethelDoc<Self::Loader>>) -> Result<Self, GenerationError> {
+        Self::compile(AethelCorpus {
             target: <Self::Loader as TargetedLoader>::TARGET.to_string(),
             documents,
         })
     }
 
     /// loads target files and creates a corpus-backed generation object.
-    fn from_files(paths: &[impl AsRef<Path>]) -> Result<Self, MergerError> {
+    fn from_files(paths: &[impl AsRef<Path>]) -> Result<Self, GenerationError> {
         let corpus = merge_files::<Self::Loader>(paths, None)?;
-        Ok(Self::new(corpus))
+        Self::compile(corpus)
     }
 }
 

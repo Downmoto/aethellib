@@ -6,8 +6,7 @@
 //! walkthrough order:
 //! 1) define loader sections (`DemoLoader`, `IdentityValues`, `LoreValues`, `WorldValues`)
 //! 2) define one generation struct composed only of `GeneratedField<T>` values
-//! 3) attach field-local candidates in `Generation::new(...)`
-//! 4) validate compile readiness in `compile()`
+//! 3) attach field-local candidates in `Generation::compile(corpus)`
 //! 5) generate full profiles and selectively reroll subsets
 //! 6) print value, provenance refs, and trace graph details
 
@@ -201,17 +200,15 @@ impl DemoGeneration {
 impl Generation for DemoGeneration {
     type Loader = DemoLoader;
     type CompiledState = ();
-    type Error = GenerationError;
 
-    /// builds field-local candidates from corpus data and attaches them directly.
-    fn new(corpus: AethelCorpus<Self::Loader>) -> Self {
+    /// builds field-local candidates from corpus data and returns a ready generation object.
+    fn compile(corpus: AethelCorpus<Self::Loader>) -> Result<Self, GenerationError> {
         let mut title = GeneratedField::pending(String::new());
         title.set_candidates(
             "title",
             generated_field_builder(&corpus, "identity", "titles", |loader| {
                 loader.identity.titles.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut name = GeneratedField::pending(String::new());
@@ -219,8 +216,7 @@ impl Generation for DemoGeneration {
             "name",
             generated_field_builder(&corpus, "identity", "first_names", |loader| {
                 loader.identity.first_names.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut middle_name = GeneratedField::pending(String::new());
@@ -228,8 +224,7 @@ impl Generation for DemoGeneration {
             "middle_name",
             generated_field_builder(&corpus, "identity", "middle_names", |loader| {
                 loader.identity.middle_names.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut last_name = GeneratedField::pending(String::new());
@@ -237,8 +232,7 @@ impl Generation for DemoGeneration {
             "last_name",
             generated_field_builder(&corpus, "identity", "last_names", |loader| {
                 loader.identity.last_names.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut suffix = GeneratedField::pending(String::new());
@@ -246,8 +240,7 @@ impl Generation for DemoGeneration {
             "suffix",
             generated_field_builder(&corpus, "identity", "suffixes", |loader| {
                 loader.identity.suffixes.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut epithet = GeneratedField::pending(String::new());
@@ -255,8 +248,7 @@ impl Generation for DemoGeneration {
             "epithet",
             generated_field_builder(&corpus, "lore", "epithets", |loader| {
                 loader.lore.epithets.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut dynasty = GeneratedField::pending(String::new());
@@ -264,15 +256,13 @@ impl Generation for DemoGeneration {
             "dynasty",
             generated_field_builder(&corpus, "lore", "dynasties", |loader| {
                 loader.lore.dynasties.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut era = GeneratedField::pending(String::new());
         era.set_candidates(
             "era",
-            generated_field_builder(&corpus, "lore", "eras", |loader| loader.lore.eras.clone())
-                .build(),
+            generated_field_builder(&corpus, "lore", "eras", |loader| loader.lore.eras.clone()),
         );
 
         let mut vocation = GeneratedField::pending(String::new());
@@ -280,8 +270,7 @@ impl Generation for DemoGeneration {
             "vocation",
             generated_field_builder(&corpus, "world", "vocations", |loader| {
                 loader.world.vocations.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut homeland = GeneratedField::pending(String::new());
@@ -289,8 +278,7 @@ impl Generation for DemoGeneration {
             "homeland",
             generated_field_builder(&corpus, "world", "homelands", |loader| {
                 loader.world.homelands.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut relic = GeneratedField::pending(String::new());
@@ -298,18 +286,16 @@ impl Generation for DemoGeneration {
             "relic",
             generated_field_builder(&corpus, "world", "relics", |loader| {
                 loader.world.relics.clone()
-            })
-            .build(),
+            }),
         );
 
         let mut omen = GeneratedField::pending(String::new());
         omen.set_candidates(
             "omen",
-            generated_field_builder(&corpus, "lore", "omens", |loader| loader.lore.omens.clone())
-                .build(),
+            generated_field_builder(&corpus, "lore", "omens", |loader| loader.lore.omens.clone()),
         );
 
-        Self {
+        let generation = Self {
             title,
             name,
             middle_name,
@@ -322,96 +308,93 @@ impl Generation for DemoGeneration {
             homeland,
             relic,
             omen,
-        }
-    }
+        };
 
-    /// validates that every field has attached compiled candidates.
-    fn compile(&mut self) -> Result<(), Self::Error> {
-        if !self.title.is_compiled() {
+        if !generation.title.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "title".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.name.is_compiled() {
+        if !generation.name.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "name".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.middle_name.is_compiled() {
+        if !generation.middle_name.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "middle_name".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.last_name.is_compiled() {
+        if !generation.last_name.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "last_name".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.suffix.is_compiled() {
+        if !generation.suffix.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "suffix".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.epithet.is_compiled() {
+        if !generation.epithet.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "epithet".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.dynasty.is_compiled() {
+        if !generation.dynasty.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "dynasty".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.era.is_compiled() {
+        if !generation.era.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "era".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.vocation.is_compiled() {
+        if !generation.vocation.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "vocation".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.homeland.is_compiled() {
+        if !generation.homeland.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "homeland".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.relic.is_compiled() {
+        if !generation.relic.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "relic".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        if !self.omen.is_compiled() {
+        if !generation.omen.is_compiled() {
             return Err(GenerationError::BuilderDefinition {
                 field: "omen".to_string(),
                 reason: "missing compiled candidates".to_string(),
             });
         }
 
-        Ok(())
+        Ok(generation)
     }
 }
 
@@ -508,8 +491,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
 
     let source_docs = SourceAethelDoc::from_aetheldocs(documents)?;
-    let mut generation = DemoGeneration::from_documents(source_docs);
-    generation.compile()?;
+    let generation = DemoGeneration::from_documents(source_docs)?;
 
     // this generated profile is reproducible and useful for snapshots/tests.
     let mut seeded_rng = rand::rngs::StdRng::seed_from_u64(42);

@@ -17,20 +17,20 @@ it describes the current 0.5.1 generator architecture in implementation order, n
 - candidate/index primitives (`GeneratedFieldCandidates<T>`, `ProvenanceCandidateIndex<T>`)
 - generation errors (`GenerationError`)
 
-`src/generator/utils.rs` contains utility builders and sampling internals:
+`src/generator/utils.rs` contains utility helpers and sampling internals:
 
-- `GeneratedFieldBuilder` / `generated_field_builder(...)`
+- `generated_field_builder(...)`
 - `sample_generated_field(...)`
 
 ## 2. high-level data flow
 
 current flow from source docs to runtime value:
 
-1. `Generation::new(corpus)` is called.
+1. `Generation::compile(corpus)` is called.
 2. each output `GeneratedField<T>` is created with `GeneratedField::pending(...)`.
-3. candidates are compiled with `generated_field_builder(...).build()`.
+3. candidates are built with `generated_field_builder(...)`.
 4. each field receives its compiled state via `set_candidates(field_name, candidates)`.
-5. `compile()` validates that required fields are compiled.
+5. `compile(corpus)` validates required fields while constructing `Self`.
 6. runtime generation calls field-level `regenerate_*` methods.
 7. each sample returns value + source refs + trace graph.
 
@@ -44,13 +44,12 @@ this enables selective re-sampling without external candidate wiring.
 - associated types:
   - `Loader: TargetedLoader`
   - `CompiledState`
-  - `Error: std::error::Error`
+  - `Error: std::error::Error + From<MergerError>`
 - required methods:
-  - `new(corpus: AethelCorpus<Self::Loader>) -> Self`
-  - `compile(&mut self) -> Result<(), Self::Error>`
+  - `compile(corpus: AethelCorpus<Self::Loader>) -> Result<Self, Self::Error>`
 - default constructors:
-  - `from_documents(...)`
-  - `from_files(...)`
+  - `from_documents(...) -> Result<Self, Self::Error>`
+  - `from_files(...) -> Result<Self, Self::Error>`
 
 design note:
 - `Generation` does not require `generate()` methods.
@@ -66,7 +65,7 @@ design note:
 - `BuilderDefinition { field, reason }`
 
 guideline:
-- use `BuilderDefinition` for static setup issues in `new/compile`.
+- use `BuilderDefinition` for static setup issues in compile/setup paths.
 - use `NotCompiled` when runtime sampling is invoked without attached candidates.
 - use `EmptyCandidates` when candidate arrays are empty at sample time.
 
@@ -158,11 +157,9 @@ sampling responsibilities:
 - map empty candidate failures to field-scoped errors.
 - attach candidate state into returned field.
 
-## 9. builder utilities (`utils.rs`)
+## 9. candidate utilities (`utils.rs`)
 
-`generated_field_builder(corpus, section, field, extract_values)` returns a fluent builder.
-
-`GeneratedFieldBuilder::build()`:
+`generated_field_builder(corpus, section, field, extract_values)` returns `GeneratedFieldCandidates<T>` directly:
 
 - iterates source documents
 - extracts values via closure
@@ -170,19 +167,19 @@ sampling responsibilities:
 - inserts value -> `SourceRef` into provenance index
 
 guideline:
-- use builders in `Generation::new(...)` to keep extraction logic local and explicit.
+- use candidate helpers in `Generation::compile(...)` to keep extraction logic local and explicit.
 
 ## 10. implementation recipe for new generation types
 
 when adding a new internal generation type:
 
 1. define struct fields as `GeneratedField<T>`.
-2. in `new(corpus)`:
+2. in `compile(corpus)`:
    - create each field with `GeneratedField::pending(...)`.
-   - create candidates with `generated_field_builder(...).build()`.
+  - create candidates with `generated_field_builder(...)`.
    - attach candidates with `set_candidates(...)`.
-3. in `compile()`:
-   - verify every required field with `is_compiled()`.
+3. still inside `compile(corpus)`:
+  - verify every required field with `is_compiled()`.
 4. implement inherent `generate_with_rng` and/or `generate`:
    - call per-field `regenerate_*` methods.
    - support selective reroll methods for lockable fields.

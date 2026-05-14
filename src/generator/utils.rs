@@ -9,65 +9,37 @@ use crate::{
     },
 };
 
-/// fluent builder for one generated field candidate pool.
-pub struct GeneratedFieldBuilder<'a, L, T, F>
-where
-    T: Eq + Hash + Clone,
-    F: FnMut(&L) -> Vec<T>,
-{
-    corpus: &'a AethelCorpus<L>,
-    section: String,
-    field: String,
-    extract_values: F,
-}
-
-impl<'a, L, T, F> GeneratedFieldBuilder<'a, L, T, F>
-where
-    T: Eq + Hash + Clone,
-    F: FnMut(&L) -> Vec<T>,
-{
-    /// builds candidate values and provenance refs from the configured extractor.
-    pub fn build(mut self) -> GeneratedFieldCandidates<T> {
-        let mut values: Vec<T> = Vec::new();
-        let mut provenance: ProvenanceCandidateIndex<T> = ProvenanceCandidateIndex::new();
-
-        for source_document in &self.corpus.documents {
-            let extracted_values = (self.extract_values)(&source_document.data);
-            for value in extracted_values {
-                values.push(value.clone());
-                provenance.insert(
-                    value,
-                    SourceRef {
-                        source_id: source_document.source_id.clone(),
-                        source_name: source_document.header.title.clone(),
-                        section: self.section.clone(),
-                        field: self.field.clone(),
-                    },
-                );
-            }
-        }
-
-        GeneratedFieldCandidates { values, provenance }
-    }
-}
-
-/// creates a fluent builder for one generated field candidate pool.
+/// creates candidates for one generated field candidate pool.
 pub fn generated_field_builder<'a, L, T, F>(
     corpus: &'a AethelCorpus<L>,
     section: &str,
     field: &str,
-    extract_values: F,
-) -> GeneratedFieldBuilder<'a, L, T, F>
+    mut extract_values: F,
+) -> GeneratedFieldCandidates<T>
 where
     T: Eq + Hash + Clone,
     F: FnMut(&L) -> Vec<T>,
 {
-    GeneratedFieldBuilder {
-        corpus,
-        section: section.to_string(),
-        field: field.to_string(),
-        extract_values,
+    let mut values: Vec<T> = Vec::new();
+    let mut provenance: ProvenanceCandidateIndex<T> = ProvenanceCandidateIndex::new();
+
+    for source_document in &corpus.documents {
+        let extracted_values = extract_values(&source_document.data);
+        for value in extracted_values {
+            values.push(value.clone());
+            provenance.insert(
+                value,
+                SourceRef {
+                    source_id: source_document.source_id.clone(),
+                    source_name: source_document.header.title.clone(),
+                    section: section.to_string(),
+                    field: field.to_string(),
+                },
+            );
+        }
     }
+
+    GeneratedFieldCandidates { values, provenance }
 }
 
 /// samples one candidate value and returns it with all known provenance refs.
