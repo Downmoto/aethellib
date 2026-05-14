@@ -1,5 +1,7 @@
 //! aethellib provides loaders, merge helpers, and generators for aethel datasets.
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -90,6 +92,41 @@ impl<T> AethelCorpus<T> {
         self.target.as_str()
     }
 
+    pub fn combine(self, other: AethelCorpus<T>) -> Self {
+        let AethelCorpus {
+            target,
+            mut documents,
+        } = self;
+        let AethelCorpus {
+            target: other_target,
+            documents: other_documents,
+        } = other;
+
+        assert_eq!(
+            target, other_target,
+            "cannot combine corpora with different targets: left='{}', right='{}'",
+            target, other_target
+        );
+
+        documents.extend(other_documents);
+
+        let mut seen_source_hashes: HashMap<String, usize> = HashMap::new();
+        for document in &mut documents {
+            let count = seen_source_hashes
+                .entry(document.source_hash.clone())
+                .or_insert(0);
+            *count += 1;
+
+            if *count == 1 {
+                document.source_id = document.source_hash.clone();
+            } else {
+                document.source_id = format!("{}:{}", document.source_hash, count);
+            }
+        }
+
+        Self { target, documents }
+    }
+
     /// returns all source ids in corpus order.
     pub fn source_ids(&self) -> Vec<&str> {
         self.documents
@@ -111,5 +148,66 @@ impl<T> AethelCorpus<T> {
         self.documents
             .iter()
             .find(|document| document.source_id == source_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AethelCorpus, AethelDocHeader, SourceAethelDoc};
+
+    fn source(hash: &str, id: &str, target: &str) -> SourceAethelDoc<()> {
+        SourceAethelDoc {
+            source_id: id.to_string(),
+            source_hash: hash.to_string(),
+            source_path: format!("/{id}.toml"),
+            header: AethelDocHeader {
+                title: id.to_string(),
+                target: target.to_string(),
+                desc: None,
+                author: None,
+                version: None,
+            },
+            data: (),
+        }
+    }
+
+    #[test]
+    fn combine_appends_documents_and_renumbers_duplicate_hash_ids() {
+        let left = AethelCorpus {
+            target: "weapon".to_string(),
+            documents: vec![source("hash-a", "old-1", "weapon")],
+        };
+
+        let right = AethelCorpus {
+            target: "weapon".to_string(),
+            documents: vec![
+                source("hash-a", "old-2", "weapon"),
+                source("hash-b", "old-3", "weapon"),
+            ],
+        };
+
+        let combined = left.combine(right);
+
+        assert_eq!(combined.target, "weapon");
+        assert_eq!(combined.documents.len(), 3);
+        assert_eq!(combined.documents[0].source_id, "hash-a");
+        assert_eq!(combined.documents[1].source_id, "hash-a:2");
+        assert_eq!(combined.documents[2].source_id, "hash-b");
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot combine corpora with different targets")]
+    fn combine_panics_for_different_targets() {
+        let left = AethelCorpus {
+            target: "weapon".to_string(),
+            documents: vec![source("hash-a", "old-1", "weapon")],
+        };
+
+        let right = AethelCorpus {
+            target: "person".to_string(),
+            documents: vec![source("hash-b", "old-2", "person")],
+        };
+
+        let _ = left.combine(right);
     }
 }

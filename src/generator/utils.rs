@@ -3,12 +3,15 @@ use std::hash::Hash;
 
 use crate::{
     AethelCorpus,
-    generator::{GeneratedField, GeneratedFieldCandidates, ProvenanceCandidateIndex, SourceRef},
+    generator::{
+        GeneratedField, GeneratedFieldCandidates, GenerationError, ProvenanceCandidateIndex,
+        SourceRef,
+    },
 };
 
-/// collects candidate values and provenance refs from one corpus field extractor.
-pub fn collect_generated_field_candidates<L, T, F>(
-    corpus: &AethelCorpus<L>,
+/// creates candidates for one generated field candidate pool.
+pub fn generated_field_builder<'a, L, T, F>(
+    corpus: &'a AethelCorpus<L>,
     section: &str,
     field: &str,
     mut extract_values: F,
@@ -44,18 +47,20 @@ pub(crate) fn sample_generated_field<T, R>(
     values: &[T],
     index: &ProvenanceCandidateIndex<T>,
     rng: &mut R,
-) -> Option<GeneratedField<T>>
+) -> Result<GeneratedField<T>, GenerationError>
 where
     T: Eq + Hash + Clone,
     R: Rng + ?Sized,
 {
     if values.is_empty() {
-        return None;
+        return Err(GenerationError::EmptyCandidates {
+            field: "unknown".to_string(),
+        });
     }
 
     let picked_index = rng.gen_range(0..values.len());
     let value = values[picked_index].clone();
     let source_refs = index.refs_for(&value).to_vec();
 
-    Some(GeneratedField { value, source_refs })
+    GeneratedField::new(value, source_refs)
 }
