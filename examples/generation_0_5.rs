@@ -295,7 +295,7 @@ impl Generation for DemoGeneration {
             generated_field_builder(&corpus, "lore", "omens", |loader| loader.lore.omens.clone()),
         );
 
-        let generation = Self {
+        Ok(Self {
             title,
             name,
             middle_name,
@@ -308,93 +308,7 @@ impl Generation for DemoGeneration {
             homeland,
             relic,
             omen,
-        };
-
-        if !generation.title.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "title".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.name.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "name".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.middle_name.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "middle_name".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.last_name.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "last_name".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.suffix.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "suffix".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.epithet.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "epithet".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.dynasty.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "dynasty".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.era.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "era".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.vocation.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "vocation".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.homeland.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "homeland".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.relic.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "relic".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        if !generation.omen.is_compiled() {
-            return Err(GenerationError::BuilderDefinition {
-                field: "omen".to_string(),
-                reason: "missing compiled candidates".to_string(),
-            });
-        }
-
-        Ok(generation)
+        })
     }
 }
 
@@ -413,20 +327,36 @@ fn main() -> Result<(), Box<dyn Error>> {
                 identity: IdentityValues {
                     titles: vec!["archon".to_string(), "warden".to_string()],
                     first_names: vec!["alder".to_string(), "brynn".to_string(), "cael".to_string()],
-                    middle_names: vec!["vale".to_string(), "thorn".to_string(), "rowan".to_string()],
+                    middle_names: vec![
+                        "vale".to_string(),
+                        "thorn".to_string(),
+                        "rowan".to_string(),
+                    ],
                     last_names: vec!["blackmere".to_string(), "stormglass".to_string()],
                     suffixes: vec!["of dawn".to_string(), "of stone".to_string()],
                 },
                 lore: LoreValues {
                     epithets: vec!["the oathbound".to_string(), "the ember-witness".to_string()],
                     dynasties: vec!["house gryph".to_string(), "house cindervale".to_string()],
-                    eras: vec!["third lantern age".to_string(), "fracture reign".to_string()],
-                    omens: vec!["ashen rain at noon".to_string(), "silver crows in spiral".to_string()],
+                    eras: vec![
+                        "third lantern age".to_string(),
+                        "fracture reign".to_string(),
+                    ],
+                    omens: vec![
+                        "ashen rain at noon".to_string(),
+                        "silver crows in spiral".to_string(),
+                    ],
                 },
                 world: WorldValues {
-                    vocations: vec!["border cartographer".to_string(), "ritual engineer".to_string()],
+                    vocations: vec![
+                        "border cartographer".to_string(),
+                        "ritual engineer".to_string(),
+                    ],
                     homelands: vec!["northreach terraces".to_string(), "glassfjord".to_string()],
-                    relics: vec!["compass of nine tides".to_string(), "obsidian treaty seal".to_string()],
+                    relics: vec![
+                        "compass of nine tides".to_string(),
+                        "obsidian treaty seal".to_string(),
+                    ],
                 },
             },
         },
@@ -441,21 +371,41 @@ fn main() -> Result<(), Box<dyn Error>> {
             data: DemoLoader {
                 identity: IdentityValues {
                     titles: vec!["magistrate".to_string(), "legate".to_string()],
-                    first_names: vec!["darian".to_string(), "elowen".to_string(), "fenn".to_string()],
-                    middle_names: vec!["quill".to_string(), "marsh".to_string(), "tide".to_string()],
+                    first_names: vec![
+                        "darian".to_string(),
+                        "elowen".to_string(),
+                        "fenn".to_string(),
+                    ],
+                    middle_names: vec![
+                        "quill".to_string(),
+                        "marsh".to_string(),
+                        "tide".to_string(),
+                    ],
                     last_names: vec!["reedmarch".to_string(), "halcyon".to_string()],
                     suffixes: vec!["of mist".to_string(), "of flame".to_string()],
                 },
                 lore: LoreValues {
-                    epithets: vec!["the flood-scribe".to_string(), "the gate-keeper".to_string()],
+                    epithets: vec![
+                        "the flood-scribe".to_string(),
+                        "the gate-keeper".to_string(),
+                    ],
                     dynasties: vec!["house delta".to_string(), "house palewater".to_string()],
                     eras: vec!["concord cycle".to_string(), "river partition".to_string()],
-                    omens: vec!["mirrorfish breaching at dusk".to_string(), "violet foam on the weir".to_string()],
+                    omens: vec![
+                        "mirrorfish breaching at dusk".to_string(),
+                        "violet foam on the weir".to_string(),
+                    ],
                 },
                 world: WorldValues {
-                    vocations: vec!["charter advocate".to_string(), "bridge tactician".to_string()],
+                    vocations: vec![
+                        "charter advocate".to_string(),
+                        "bridge tactician".to_string(),
+                    ],
                     homelands: vec!["low delta bastions".to_string(), "brinecourt".to_string()],
-                    relics: vec!["salt-etched decree blade".to_string(), "ledger of drowned crowns".to_string()],
+                    relics: vec![
+                        "salt-etched decree blade".to_string(),
+                        "ledger of drowned crowns".to_string(),
+                    ],
                 },
             },
         },
@@ -471,20 +421,42 @@ fn main() -> Result<(), Box<dyn Error>> {
                 identity: IdentityValues {
                     titles: vec!["prefect".to_string(), "oracle".to_string()],
                     first_names: vec!["galen".to_string(), "heli".to_string(), "iora".to_string()],
-                    middle_names: vec!["hollow".to_string(), "echo".to_string(), "lumen".to_string()],
+                    middle_names: vec![
+                        "hollow".to_string(),
+                        "echo".to_string(),
+                        "lumen".to_string(),
+                    ],
                     last_names: vec!["deepwake".to_string(), "starbreak".to_string()],
                     suffixes: vec!["of tides".to_string(), "of embers".to_string()],
                 },
                 lore: LoreValues {
-                    epithets: vec!["the trench-eyed".to_string(), "the patient flame".to_string()],
+                    epithets: vec![
+                        "the trench-eyed".to_string(),
+                        "the patient flame".to_string(),
+                    ],
                     dynasties: vec!["house meridian".to_string(), "house undertorch".to_string()],
-                    eras: vec!["seventh eclipse".to_string(), "bell of red winter".to_string()],
-                    omens: vec!["a silent aurora beneath the surf".to_string(), "ink tides rising uphill".to_string()],
+                    eras: vec![
+                        "seventh eclipse".to_string(),
+                        "bell of red winter".to_string(),
+                    ],
+                    omens: vec![
+                        "a silent aurora beneath the surf".to_string(),
+                        "ink tides rising uphill".to_string(),
+                    ],
                 },
                 world: WorldValues {
-                    vocations: vec!["abyssal archivist".to_string(), "signal alchemist".to_string()],
-                    homelands: vec!["sunken meridian".to_string(), "the brass trench".to_string()],
-                    relics: vec!["astrolabe of drowned noon".to_string(), "vacuum pearl reliquary".to_string()],
+                    vocations: vec![
+                        "abyssal archivist".to_string(),
+                        "signal alchemist".to_string(),
+                    ],
+                    homelands: vec![
+                        "sunken meridian".to_string(),
+                        "the brass trench".to_string(),
+                    ],
+                    relics: vec![
+                        "astrolabe of drowned noon".to_string(),
+                        "vacuum pearl reliquary".to_string(),
+                    ],
                 },
             },
         },
@@ -542,6 +514,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert_eq!(sampled.homeland().value(), &locked_homeland);
     assert_eq!(sampled.dynasty().value(), &locked_dynasty);
 
+    // by-value regenerate: sampled is unchanged.
+    let name_before_value_regen = sampled.name().value().clone();
+    let regenerated_name = sampled.name().regenerate()?;
+    println!("\nname before by-value regenerate: {name_before_value_regen}");
+    println!("name returned by regenerate: {}", regenerated_name.value());
+    println!("name still on sampled: {}", sampled.name().value());
+
+    // in-place regenerate: sampled.name is mutated directly.
+    let name_before_in_place = sampled.name().value().clone();
+    sampled.name.regenerate_in_place()?;
+    println!("name before in-place regenerate: {name_before_in_place}");
+    println!("name after in-place regenerate: {}", sampled.name().value());
+
+
     Ok(())
 }
 
@@ -579,11 +565,7 @@ fn print_field_provenance(label: &str, field: &GeneratedField<String>) {
         if let Some(source_ref) = &node.source_ref {
             println!(
                 "  node {} {:?} '{}' -> {}.{}",
-                node.id,
-                node.kind,
-                node.label,
-                source_ref.section,
-                source_ref.field,
+                node.id, node.kind, node.label, source_ref.section, source_ref.field,
             );
         } else {
             println!("  node {} {:?} '{}'", node.id, node.kind, node.label);

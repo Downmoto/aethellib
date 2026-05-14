@@ -21,8 +21,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use aethellib::Target;
 use aethellib::generator::{
-    GeneratedFieldCandidates, GenerationError, ProvenanceCandidateIndex,
-    generated_field_builder,
+    GeneratedFieldCandidates, GenerationError, ProvenanceCandidateIndex, generated_field_builder,
 };
 use aethellib::loader::error::LoaderErrorKind;
 use aethellib::merger::error::MergerError;
@@ -303,27 +302,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     let generated_field = from_compiled.generate_with_rng(&mut provenance_rng)?;
     assert!(!generated_field.word().value().is_empty());
     assert!(!generated_field.word().source_refs().is_empty());
-    assert_eq!(
-        generated_field.word().source_refs()[0].section,
-        "values"
-    );
-    assert_eq!(
-        generated_field.word().source_refs()[0].field,
-        "words"
-    );
-    assert!(
-        generated_field.word().source_refs()[0].matches("values", "words")
-    );
+    assert_eq!(generated_field.word().source_refs()[0].section, "values");
+    assert_eq!(generated_field.word().source_refs()[0].field, "words");
+    assert!(generated_field.word().source_refs()[0].matches("values", "words"));
     assert!(
         generated_field
             .word()
             .has_source_id(generated_field.word().source_refs()[0].source_id.as_str())
     );
     assert!(!generated_field.word().source_ids().is_empty());
-    assert!(!generated_field
-        .word()
-        .source_paths_in(&corpus_from_sources)
-        .is_empty());
+    assert!(
+        !generated_field
+            .word()
+            .source_paths_in(&corpus_from_sources)
+            .is_empty()
+    );
     assert!(!generated_field.word().trace_graph().nodes().is_empty());
 
     // verify file-backed constructor convenience.

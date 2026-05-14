@@ -38,9 +38,14 @@ impl std::fmt::Display for GenerationError {
             GenerationError::EmptyCandidates { field } => {
                 write!(f, "no candidates are available for field '{field}'")
             }
-            GenerationError::InvalidTraceGraph(message) => write!(f, "invalid trace graph: {message}"),
+            GenerationError::InvalidTraceGraph(message) => {
+                write!(f, "invalid trace graph: {message}")
+            }
             GenerationError::BuilderDefinition { field, reason } => {
-                write!(f, "invalid builder definition for field '{field}': {reason}")
+                write!(
+                    f,
+                    "invalid builder definition for field '{field}': {reason}"
+                )
             }
         }
     }
@@ -68,7 +73,9 @@ pub trait Generation: Sized {
     fn compile(corpus: AethelCorpus<Self::Loader>) -> Result<Self, GenerationError>;
 
     /// creates a generation object directly from source documents.
-    fn from_documents(documents: Vec<SourceAethelDoc<Self::Loader>>) -> Result<Self, GenerationError> {
+    fn from_documents(
+        documents: Vec<SourceAethelDoc<Self::Loader>>,
+    ) -> Result<Self, GenerationError> {
         Self::compile(AethelCorpus {
             target: <Self::Loader as TargetedLoader>::TARGET.to_string(),
             documents,
@@ -217,7 +224,11 @@ impl<T> GeneratedField<T> {
     }
 
     /// attaches compiled candidates to this field for self-managed re-sampling.
-    pub fn set_candidates(&mut self, field: impl Into<String>, candidates: GeneratedFieldCandidates<T>) {
+    pub fn set_candidates(
+        &mut self,
+        field: impl Into<String>,
+        candidates: GeneratedFieldCandidates<T>,
+    ) {
         self.field_name = Some(field.into());
         self.compiled_candidates = Some(candidates);
     }
@@ -309,7 +320,10 @@ impl<T> GeneratedField<T> {
     }
 
     /// re-samples this field in place from its own compiled candidates.
-    pub fn regenerate_in_place_with_rng<R: Rng + ?Sized>(&mut self, rng: &mut R) -> Result<(), GenerationError>
+    pub fn regenerate_in_place_with_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+    ) -> Result<(), GenerationError>
     where
         T: Eq + Hash + Clone,
     {
@@ -347,13 +361,15 @@ where
         field: &str,
         rng: &mut R,
     ) -> Result<GeneratedField<T>, GenerationError> {
-        let mut generated_field = utils::sample_generated_field(&self.values, &self.provenance, rng)
-            .map_err(|error| match error {
-                GenerationError::EmptyCandidates { .. } => GenerationError::EmptyCandidates {
-                    field: field.to_string(),
+        let mut generated_field =
+            utils::sample_generated_field(&self.values, &self.provenance, rng).map_err(
+                |error| match error {
+                    GenerationError::EmptyCandidates { .. } => GenerationError::EmptyCandidates {
+                        field: field.to_string(),
+                    },
+                    _ => error,
                 },
-                _ => error,
-            })?;
+            )?;
 
         generated_field.set_candidates(field.to_string(), self.clone());
         Ok(generated_field)
