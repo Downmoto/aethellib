@@ -1,29 +1,20 @@
-//! aethellib provides loaders, merge helpers, and generators for aethel datasets.
+//! aethellib provides loaders and corpus builders for aethel datasets.
 
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    loader::TargetedLoader,
-    merger::{error::MergerError, utils::cast_aethel_docs_to_sources},
-};
-
-/// generation module entrypoint.
-pub mod generator;
 /// loader module entrypoint.
 pub mod loader;
-/// merge module entrypoint.
-pub mod merger;
 /// prelude module for common imports.
 pub mod prelude;
 
-/// open target identifier used by loaders, mergers, and generators.
+/// open target identifier used by loaders and corpus builders.
 pub type Target = String;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-/// common metadata required in each input file header.
-pub struct AethelDocHeader {
+/// common metadata from the `[header]` table of each input file.
+pub struct DocumentMetadata {
     /// dataset display name.
     pub title: String,
     /// target category used for loader validation.
@@ -34,70 +25,94 @@ pub struct AethelDocHeader {
     pub author: Option<String>,
     /// optional dataset version.
     pub version: Option<String>,
+    /// optional schema identifier.
+    pub schema: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-/// parsed toml payload with header plus target-specific body data.
-pub struct AethelDoc<T> {
-    /// parsed file header.
-    pub header: AethelDocHeader,
-    /// target-specific sections flattened from the same root document.
+/// a rule defined by the TOML file author inside a section.
+pub struct Rule {
+    /// output field this rule applies to.
+    #[serde(rename = "for")]
+    pub for_field: String,
+    /// rule kind identifier (e.g. `"scramble"`).
+    pub rule: String,
+    /// additional rule-specific parameters keyed by name.
     #[serde(flatten)]
-    pub data: T,
+    pub params: HashMap<String, toml::Value>,
 }
 
 #[derive(Debug, Clone)]
-/// one source document retained in a target corpus.
-pub struct SourceAethelDoc<T> {
-    /// unique id for this source within a corpus instance.
+/// a named value pool inside a section.
+pub struct Field {
+    /// field name as defined by the TOML key.
+    pub title: String,
+    /// candidate string values for this field.
+    pub values: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+/// a top-level section inside a document (one TOML table, excluding `[header]`).
+pub struct Section {
+    /// section name derived from the TOML table key.
+    pub title: String,
+    /// output field names produced by this section.
+    pub outputs: Vec<String>,
+    /// rules authored inside this section.
+    pub rules: Vec<Rule>,
+    /// named value pools defined within this section.
+    pub fields: Vec<Field>,
+}
+
+#[derive(Debug, Clone)]
+/// a parsed and corpus-tracked source document.
+pub struct Document {
+    /// metadata from the `[header]` table.
+    pub metadata: DocumentMetadata,
+    /// sections parsed from the document body.
+    pub sections: Vec<Section>,
+    /// unique id within the owning corpus instance.
     pub source_id: String,
-    /// deterministic hash derived from canonicalized document content and target.
+    /// deterministic hash derived from document content and target.
     pub source_hash: String,
-    /// original source path used for loading.
+    /// original source path or name supplied at load time.
     pub source_path: String,
-    /// metadata from the source header.
-    pub header: AethelDocHeader,
-    /// source data body.
-    pub data: T,
 }
 
-impl<T> SourceAethelDoc<T>
-where
-    T: TargetedLoader + serde::Serialize,
-{
-    /// casts one parsed aethel document into one source document.
-    pub fn from_aetheldoc(document: AethelDoc<T>) -> Result<Self, MergerError> {
-        let mut source_documents = cast_aethel_docs_to_sources::<T>(vec![document])?;
-        Ok(source_documents.remove(0))
-    }
-
-    /// casts parsed aethel documents into source documents using merge hash/id rules.
-    pub fn from_aetheldocs(documents: Vec<AethelDoc<T>>) -> Result<Vec<Self>, MergerError> {
-        cast_aethel_docs_to_sources::<T>(documents)
+impl Document {
+    /// returns the section with the given title, if present.
+    pub fn section(&self, title: &str) -> Option<&Section> {
+        self.sections.iter().find(|s| s.title == title)
     }
 }
 
 #[derive(Debug, Clone)]
-/// per-target corpus retaining all source documents and metadata.
-pub struct AethelCorpus<T> {
+/// a corpus of source documents for one target.
+pub struct Corpus {
     /// target represented by all source documents.
     pub target: Target,
     /// source documents in first-seen order.
-    pub documents: Vec<SourceAethelDoc<T>>,
+    pub documents: Vec<Document>,
 }
 
-impl<T> AethelCorpus<T> {
+impl Corpus {
+    /// returns a new corpus builder for the given target.
+    pub fn builder(target: impl Into<String>) -> crate::loader::CorpusBuilder {
+        crate::loader::CorpusBuilder::new(target.into())
+    }
+
     /// returns the target represented by this corpus.
     pub fn target(&self) -> &str {
         self.target.as_str()
     }
 
-    pub fn combine(self, other: AethelCorpus<T>) -> Self {
-        let AethelCorpus {
+    /// combines two corpora with the same target into one, reassigning duplicate source ids.
+    pub fn combine(self, other: Corpus) -> Self {
+        let Corpus {
             target,
             mut documents,
         } = self;
-        let AethelCorpus {
+        let Corpus {
             target: other_target,
             documents: other_documents,
         } = other;
@@ -144,7 +159,7 @@ impl<T> AethelCorpus<T> {
     }
 
     /// finds one source document by source id.
-    pub fn find_source(&self, source_id: &str) -> Option<&SourceAethelDoc<T>> {
+    pub fn find_source(&self, source_id: &str) -> Option<&Document> {
         self.documents
             .iter()
             .find(|document| document.source_id == source_id)
@@ -153,36 +168,37 @@ impl<T> AethelCorpus<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AethelCorpus, AethelDocHeader, SourceAethelDoc};
+    use super::{Corpus, Document, DocumentMetadata, Section};
 
-    fn source(hash: &str, id: &str, target: &str) -> SourceAethelDoc<()> {
-        SourceAethelDoc {
+    fn doc(hash: &str, id: &str, target: &str) -> Document {
+        Document {
             source_id: id.to_string(),
             source_hash: hash.to_string(),
             source_path: format!("/{id}.toml"),
-            header: AethelDocHeader {
+            metadata: DocumentMetadata {
                 title: id.to_string(),
                 target: target.to_string(),
                 desc: None,
                 author: None,
                 version: None,
+                schema: None,
             },
-            data: (),
+            sections: Vec::<Section>::new(),
         }
     }
 
     #[test]
     fn combine_appends_documents_and_renumbers_duplicate_hash_ids() {
-        let left = AethelCorpus {
+        let left = Corpus {
             target: "weapon".to_string(),
-            documents: vec![source("hash-a", "old-1", "weapon")],
+            documents: vec![doc("hash-a", "old-1", "weapon")],
         };
 
-        let right = AethelCorpus {
+        let right = Corpus {
             target: "weapon".to_string(),
             documents: vec![
-                source("hash-a", "old-2", "weapon"),
-                source("hash-b", "old-3", "weapon"),
+                doc("hash-a", "old-2", "weapon"),
+                doc("hash-b", "old-3", "weapon"),
             ],
         };
 
@@ -198,14 +214,14 @@ mod tests {
     #[test]
     #[should_panic(expected = "cannot combine corpora with different targets")]
     fn combine_panics_for_different_targets() {
-        let left = AethelCorpus {
+        let left = Corpus {
             target: "weapon".to_string(),
-            documents: vec![source("hash-a", "old-1", "weapon")],
+            documents: vec![doc("hash-a", "old-1", "weapon")],
         };
 
-        let right = AethelCorpus {
+        let right = Corpus {
             target: "person".to_string(),
-            documents: vec![source("hash-b", "old-2", "person")],
+            documents: vec![doc("hash-b", "old-2", "person")],
         };
 
         let _ = left.combine(right);

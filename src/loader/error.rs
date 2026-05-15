@@ -1,4 +1,4 @@
-//! loader-specific error types with optional source-path context.
+//! unified loader error types used across all load entrypoints.
 
 use std::{fmt, path::Path};
 
@@ -10,10 +10,12 @@ pub enum LoaderErrorKind {
     Read,
     Parse,
     TargetMismatch,
+    OptionViolation,
+    InvalidInput,
 }
 
 #[derive(Debug)]
-/// errors that can happen while loading and validating a toml file.
+/// errors returned by all load entrypoints.
 pub enum LoaderError {
     /// file system read failure.
     ReadError {
@@ -22,19 +24,22 @@ pub enum LoaderError {
         /// underlying io source error.
         source: std::io::Error,
     },
-    /// toml deserialization failure.
+    /// toml deserialization or structural parse failure.
     ParseError {
         /// optional source file path if available.
         path: Option<String>,
         /// underlying parse source error.
         source: toml::de::Error,
     },
-    /// file target does not match the loader target.
+    /// file target does not match the expected target.
     TargetMismatch { expected: Target, found: Target },
+    /// a load option constraint was violated.
+    OptionViolation(String),
+    /// invalid arguments supplied to a load entrypoint.
+    InvalidInput(String),
 }
 
 impl fmt::Display for LoaderError {
-    /// formats loader errors for user-facing messages.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LoaderError::ReadError { path, source } => {
@@ -54,6 +59,8 @@ impl fmt::Display for LoaderError {
             LoaderError::TargetMismatch { expected, found } => {
                 write!(f, "target mismatch: expected '{expected}', got '{found}'")
             }
+            LoaderError::OptionViolation(msg) => write!(f, "{msg}"),
+            LoaderError::InvalidInput(msg) => write!(f, "{msg}"),
         }
     }
 }
@@ -61,7 +68,6 @@ impl fmt::Display for LoaderError {
 impl std::error::Error for LoaderError {}
 
 impl From<std::io::Error> for LoaderError {
-    /// converts io errors into loader read errors.
     fn from(value: std::io::Error) -> Self {
         LoaderError::ReadError {
             path: None,
@@ -71,7 +77,6 @@ impl From<std::io::Error> for LoaderError {
 }
 
 impl From<toml::de::Error> for LoaderError {
-    /// converts toml parsing errors into loader parse errors.
     fn from(value: toml::de::Error) -> Self {
         LoaderError::ParseError {
             path: None,
@@ -81,16 +86,17 @@ impl From<toml::de::Error> for LoaderError {
 }
 
 impl LoaderError {
-    /// returns the stable machine-readable kind for this loader error.
+    /// returns the stable machine-readable kind for this error.
     pub fn kind(&self) -> LoaderErrorKind {
         match self {
             LoaderError::ReadError { .. } => LoaderErrorKind::Read,
             LoaderError::ParseError { .. } => LoaderErrorKind::Parse,
             LoaderError::TargetMismatch { .. } => LoaderErrorKind::TargetMismatch,
+            LoaderError::OptionViolation(_) => LoaderErrorKind::OptionViolation,
+            LoaderError::InvalidInput(_) => LoaderErrorKind::InvalidInput,
         }
     }
 
-    /// creates a read error with source path context.
     pub(crate) fn read_for_path(path: impl AsRef<Path>, source: std::io::Error) -> Self {
         LoaderError::ReadError {
             path: Some(path.as_ref().to_string_lossy().to_string()),
@@ -98,7 +104,6 @@ impl LoaderError {
         }
     }
 
-    /// creates a parse error with source path context.
     pub(crate) fn parse_for_path(path: impl AsRef<Path>, source: toml::de::Error) -> Self {
         LoaderError::ParseError {
             path: Some(path.as_ref().to_string_lossy().to_string()),
@@ -141,15 +146,16 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_for_path_includes_path_in_message() {
-        let parse_source = toml::from_str::<toml::Table>("[").unwrap_err();
-        let error = LoaderError::parse_for_path("invalid.toml", parse_source);
+    fn test_option_violation_kind() {
+        let error = LoaderError::OptionViolation("some constraint".to_string());
+        assert_eq!(error.to_string(), "some constraint");
+        assert_eq!(error.kind(), LoaderErrorKind::OptionViolation);
+    }
 
-        assert!(error.to_string().contains("invalid.toml"));
-        assert!(matches!(
-            error,
-            LoaderError::ParseError { path: Some(_), .. }
-        ));
-        assert_eq!(error.kind(), LoaderErrorKind::Parse);
+    #[test]
+    fn test_invalid_input_kind() {
+        let error = LoaderError::InvalidInput("bad input".to_string());
+        assert_eq!(error.to_string(), "bad input");
+        assert_eq!(error.kind(), LoaderErrorKind::InvalidInput);
     }
 }

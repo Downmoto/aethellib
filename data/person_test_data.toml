@@ -1,19 +1,24 @@
 [header]
-name = "person test set"
+title = "person test set"
 target = "person"
 desc = "minimal person name primitives"
 author = "aethellib"
 version = "0.1"
+schema = "01"
 
 [name]
+outputs = ["name"]
+rules = [
+    { for = "name", rule = "scramble", sample_count = [
+        1,
+        3,
+    ], from = [
+        "first",
+        "middle",
+        "last",
+    ] },
+]
+
 first = ["al", "ra", "jo", "el"]
 middle = ["an", "is", "or"]
 last = ["ton", "ric", "den", "vale"]
-
-
-[rules]
-name = { rule = "scramble", combine = [
-    "first",
-    "middle",
-    "last",
-], chance = { first = 100, middle = 30, last = 90 } }
