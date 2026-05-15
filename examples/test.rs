@@ -27,7 +27,7 @@ use aethellib::loader::error::LoaderErrorKind;
 use aethellib::merger::error::MergerError;
 use aethellib::merger::error::MergerErrorKind;
 use aethellib::merger::{
-    InMemoryMergeSource, MergeValidator, merge_files_with_validator, merge_sources,
+    MergeSourceInput, MergeValidator, merge_files_with_validator, merge_sources,
     merge_sources_with_validator,
 };
 use aethellib::prelude::{
@@ -142,13 +142,6 @@ impl MergeValidator<ExampleLoader> for TitleContainsValidator {
     }
 }
 
-#[allow(deprecated)]
-fn merge_with_legacy_alias(
-    paths: &[impl AsRef<Path>],
-) -> Result<AethelCorpus<ExampleLoader>, MergerError> {
-    aethellib::merger::merge_target_files::<ExampleLoader>(paths, None)
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
     // a private fixture root is created per run to avoid cross-run interference.
     let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -188,12 +181,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // verify in-memory merge entrypoint for callers that already hold raw inputs.
     let in_memory_sources = [
-        InMemoryMergeSource {
-            source_name: "memory-alpha.toml",
+        MergeSourceInput {
+            path: "memory-alpha",
             raw: raw_alpha.as_str(),
         },
-        InMemoryMergeSource {
-            source_name: "memory-beta.toml",
+        MergeSourceInput {
+            path: "memory-beta",
             raw: raw_beta.as_str(),
         },
     ];
@@ -216,9 +209,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         merge_files_with_validator::<ExampleLoader>(&merge_paths, None, &alpha_only_validator);
     assert!(rejected_file_merge.is_err());
 
-    // verify deprecated alias remains functional during migration window.
-    let corpus_legacy = merge_with_legacy_alias(&merge_paths)?;
-    assert_eq!(corpus_legacy.documents.len(), 2);
 
     // verify merge option enforcement for duplicate titles.
     let strict_opts = MergeOptions {

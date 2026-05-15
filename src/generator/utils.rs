@@ -10,8 +10,8 @@ use crate::{
 };
 
 /// creates candidates for one generated field candidate pool.
-pub fn generated_field_builder<'a, L, T, F>(
-    corpus: &'a AethelCorpus<L>,
+pub fn generated_field_builder<L, T, F>(
+    corpus: &AethelCorpus<L>,
     section: &str,
     field: &str,
     mut extract_values: F,
