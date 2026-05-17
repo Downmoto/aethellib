@@ -23,8 +23,8 @@ pub struct ValueProvenance {
 pub struct PooledValue {
     /// string value extracted from one field entry.
     pub value: String,
-    /// origin metadata for this value.
-    pub provenance: ValueProvenance,
+    /// all origins that produced this value; merged when the same value appears in multiple sources.
+    pub provenance: Vec<ValueProvenance>,
 }
 
 #[derive(Debug, Clone)]
@@ -306,12 +306,12 @@ first = ["cedar"]
         assert!(
             name_first
                 .iter()
-                .all(|value| value.provenance.section == "name")
+                .all(|value| value.provenance.iter().all(|p| p.section == "name"))
         );
         assert!(
             aliases_first
                 .iter()
-                .all(|value| value.provenance.section == "aliases")
+                .all(|value| value.provenance.iter().all(|p| p.section == "aliases"))
         );
     }
 

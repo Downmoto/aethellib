@@ -65,27 +65,37 @@ mod tests {
     }
 }
 
-/// builds pools keyed by exact section and field pairs.
+/// builds pools keyed by exact section and field pairs, merging provenance for duplicate values.
 pub(crate) fn build_value_pools(documents: &[Document]) -> Vec<ValuePool> {
-    let mut grouped: BTreeMap<(String, String), Vec<PooledValue>> = BTreeMap::new();
+    // outer key: (section, field); inner key: value string → index in Vec<PooledValue>
+    let mut grouped: BTreeMap<(String, String), (Vec<PooledValue>, HashMap<String, usize>)> =
+        BTreeMap::new();
 
     for document in documents {
         for section in &document.sections {
             for field in &section.fields {
-                let pooled_values = grouped
+                let (pooled_values, index) = grouped
                     .entry((section.title.clone(), field.title.clone()))
                     .or_default();
 
+                let prov = ValueProvenance {
+                    source_id: document.source_id.clone(),
+                    document_title: document.metadata.title.clone(),
+                    section: section.title.clone(),
+                    field: field.title.clone(),
+                };
+
                 for value in &field.values {
-                    pooled_values.push(PooledValue {
-                        value: value.clone(),
-                        provenance: ValueProvenance {
-                            source_id: document.source_id.clone(),
-                            document_title: document.metadata.title.clone(),
-                            section: section.title.clone(),
-                            field: field.title.clone(),
-                        },
-                    });
+                    if let Some(&existing) = index.get(value.as_str()) {
+                        // same value string already present — append provenance
+                        pooled_values[existing].provenance.push(prov.clone());
+                    } else {
+                        index.insert(value.clone(), pooled_values.len());
+                        pooled_values.push(PooledValue {
+                            value: value.clone(),
+                            provenance: vec![prov.clone()],
+                        });
+                    }
                 }
             }
         }
@@ -93,7 +103,7 @@ pub(crate) fn build_value_pools(documents: &[Document]) -> Vec<ValuePool> {
 
     grouped
         .into_iter()
-        .map(|((section, field), values)| ValuePool {
+        .map(|((section, field), (values, _))| ValuePool {
             section,
             field,
             values,

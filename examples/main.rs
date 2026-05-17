@@ -8,5 +8,7 @@ fn main() {
         "data/weapon_merge_part_4.toml",
         ], "weapon", None).unwrap();
 
-    dbg!("{}", c);
+    let first_name_pool = c.pooled_values_for_field_section("prefix", "name").unwrap();
+
+    dbg!(first_name_pool);
 }
