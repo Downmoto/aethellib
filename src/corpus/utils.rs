@@ -1,8 +1,10 @@
 //! private loader utilities for hashing and source id assignment.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use sha2::{Digest, Sha256};
+
+use crate::{Document, corpus::{PooledValue, ValuePool, ValueProvenance}};
 
 /// hashes canonicalized source content with target context for stable identity.
 pub(crate) fn hash_source_content(target: &str, raw: &str) -> String {
@@ -61,4 +63,40 @@ mod tests {
         assert_eq!(id3, "abc:3");
         assert_eq!(id4, "xyz");
     }
+}
+
+/// builds pools keyed by exact section and field pairs.
+pub(crate) fn build_value_pools(documents: &[Document]) -> Vec<ValuePool> {
+    let mut grouped: BTreeMap<(String, String), Vec<PooledValue>> = BTreeMap::new();
+
+    for document in documents {
+        for section in &document.sections {
+            for field in &section.fields {
+                let pooled_values = grouped
+                    .entry((section.title.clone(), field.title.clone()))
+                    .or_default();
+
+                for value in &field.values {
+                    pooled_values.push(PooledValue {
+                        value: value.clone(),
+                        provenance: ValueProvenance {
+                            source_id: document.source_id.clone(),
+                            document_title: document.metadata.title.clone(),
+                            section: section.title.clone(),
+                            field: field.title.clone(),
+                        },
+                    });
+                }
+            }
+        }
+    }
+
+    grouped
+        .into_iter()
+        .map(|((section, field), values)| ValuePool {
+            section,
+            field,
+            values,
+        })
+        .collect()
 }

@@ -76,7 +76,9 @@ impl Document {
 
 #[cfg(test)]
 mod tests {
-    use super::{Document, DocumentMetadata, Section};
+    use std::vec;
+
+use super::{Document, DocumentMetadata, Section};
 
     use crate::corpus::Corpus;
 
@@ -102,6 +104,7 @@ mod tests {
         let left = Corpus {
             target: "weapon".to_string(),
             documents: vec![doc("hash-a", "old-1", "weapon")],
+            pools: vec![]
         };
 
         let right = Corpus {
@@ -110,6 +113,7 @@ mod tests {
                 doc("hash-a", "old-2", "weapon"),
                 doc("hash-b", "old-3", "weapon"),
             ],
+            pools: vec![]
         };
 
         let combined = left.combine(right);
@@ -127,11 +131,13 @@ mod tests {
         let left = Corpus {
             target: "weapon".to_string(),
             documents: vec![doc("hash-a", "old-1", "weapon")],
+            pools: vec![]
         };
 
         let right = Corpus {
             target: "person".to_string(),
             documents: vec![doc("hash-b", "old-2", "person")],
+            pools: vec![]
         };
 
         let _ = left.combine(right);

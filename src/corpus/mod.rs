@@ -2,7 +2,47 @@ pub(crate) mod utils;
 
 use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}};
 
-use crate::{Document, Target, loader::{LoadOptions, LoadValidator, error::LoaderError, parse_document}};
+use crate::{Document, Target, corpus::utils::build_value_pools, loader::{LoadOptions, LoadValidator, error::LoaderError, parse_document}};
+
+
+#[derive(Debug, Clone)]
+/// tracks where one pooled value came from.
+pub struct ValueProvenance {
+    /// unique source identifier inside the corpus.
+    pub source_id: String,
+    /// source document title from `[header].title`.
+    pub document_title: String,
+    /// section name that contained this value.
+    pub section: String,
+    /// field name that contained this value.
+    pub field: String,
+}
+
+#[derive(Debug, Clone)]
+/// one pooled value with provenance metadata.
+pub struct PooledValue {
+    /// string value extracted from one field entry.
+    pub value: String,
+    /// origin metadata for this value.
+    pub provenance: ValueProvenance,
+}
+
+#[derive(Debug, Clone)]
+/// pooled values for one exact section and field pair.
+pub struct ValuePool {
+    /// section name for this pool.
+    pub section: String,
+    /// field name for this pool.
+    pub field: String,
+    values: Vec<PooledValue>
+}
+
+impl ValuePool {
+    /// returns all pooled values in this pool.
+    pub fn values(&self) -> &[PooledValue] {
+        &self.values
+    }
+}
 
 #[derive(Debug, Clone)]
 /// a corpus of source documents for one target.
@@ -11,6 +51,8 @@ pub struct Corpus {
     pub target: Target,
     /// source documents in first-seen order.
     pub documents: Vec<Document>,
+    /// pools of values based of section -> field.
+    pub pools: Vec<ValuePool>
 }
 
 impl Corpus {
@@ -29,10 +71,12 @@ impl Corpus {
         let Corpus {
             target,
             mut documents,
+            pools: _
         } = self;
         let Corpus {
             target: other_target,
             documents: other_documents,
+            pools: _
         } = other;
 
         assert_eq!(
@@ -57,7 +101,9 @@ impl Corpus {
             }
         }
 
-        Self { target, documents }
+        let pools = build_value_pools(&documents);
+
+        Self { target, documents, pools }
     }
 
     /// returns all source ids in corpus order.
@@ -81,6 +127,14 @@ impl Corpus {
         self.documents
             .iter()
             .find(|document| document.source_id == source_id)
+    }
+
+    /// returns pooled values for one exact section and field pair.
+    pub fn pooled_values_for_field_section(&self, field: &str, section: &str) -> Option<&[PooledValue]> {
+        self.pools
+            .iter()
+            .find(|pool| pool.field == field && pool.section == section)
+            .map(ValuePool::values)
     }
 }
 
@@ -197,9 +251,95 @@ impl CorpusBuilder {
             documents.push(doc);
         }
 
+        let pools = build_value_pools(&documents);
+
         Ok(Corpus {
             target: self.target,
             documents,
+            pools,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Corpus;
+
+    #[test]
+    fn pooled_values_lookup_keeps_same_field_names_separate_per_section() {
+        let doc1 = r#"
+[header]
+title = "doc one"
+target = "weapon"
+
+[name]
+first = ["ash", "birch"]
+
+[aliases]
+first = ["ember"]
+"#;
+
+        let doc2 = r#"
+[header]
+title = "doc two"
+target = "weapon"
+
+[name]
+first = ["cedar"]
+"#;
+
+        let corpus = Corpus::builder("weapon")
+            .add_str("doc-1", doc1)
+            .add_str("doc-2", doc2)
+            .build()
+            .expect("corpus should build");
+
+        let name_first = corpus
+            .pooled_values_for_field_section("first", "name")
+            .expect("name.first pool should exist");
+        let aliases_first = corpus
+            .pooled_values_for_field_section("first", "aliases")
+            .expect("aliases.first pool should exist");
+
+        assert_eq!(name_first.len(), 3);
+        assert_eq!(aliases_first.len(), 1);
+        assert!(
+            name_first
+                .iter()
+                .all(|value| value.provenance.section == "name")
+        );
+        assert!(
+            aliases_first
+                .iter()
+                .all(|value| value.provenance.section == "aliases")
+        );
+    }
+
+    #[test]
+    fn pooled_values_lookup_returns_none_for_missing_section_field_pair() {
+        let raw = r#"
+[header]
+title = "doc one"
+target = "person"
+
+[name]
+first = ["al"]
+"#;
+
+        let corpus = Corpus::builder("person")
+            .add_str("doc-1", raw)
+            .build()
+            .expect("corpus should build");
+
+        assert!(
+            corpus
+                .pooled_values_for_field_section("last", "name")
+                .is_none()
+        );
+        assert!(
+            corpus
+                .pooled_values_for_field_section("first", "aliases")
+                .is_none()
+        );
     }
 }
