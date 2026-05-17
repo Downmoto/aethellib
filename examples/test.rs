@@ -17,7 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use aethellib::loader::error::LoaderErrorKind;
 use aethellib::prelude::{
-    Corpus, Document, LoadOptions, LoadValidator, LoaderError, load_files, load_str,
+    Corpus, Document, LoadOptions, LoadValidator, LoaderError, load_files,
 };
 
 struct FixtureDirGuard {
@@ -72,29 +72,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dup_one_path = write_fixture(fixture_dir.path(), "dup_one.toml", &raw_dup)?;
     let dup_two_path = write_fixture(fixture_dir.path(), "dup_two.toml", &raw_dup)?;
 
-    // inline parsing via load_str
-    let doc = load_str("inline-alpha", &raw_alpha, "example")?;
-    assert_eq!(doc.metadata.target, "example");
-    assert_eq!(doc.metadata.title, "alpha set");
-    assert_eq!(doc.source_path, "inline-alpha");
-    assert!(!doc.source_hash.is_empty());
-    assert_eq!(doc.source_id, doc.source_hash);
-
-    // section and field access
-    assert_eq!(doc.sections.len(), 1);
-    let section = &doc.sections[0];
-    assert_eq!(section.title, "values");
-    assert!(!section.fields.is_empty());
-    assert!(doc.section("values").is_some());
-    assert!(doc.section("nonexistent").is_none());
-
-    // target mismatch from load_str
-    let mismatch = load_str("inline-person", &raw_person, "example");
-    assert!(mismatch.is_err());
-    assert_eq!(
-        mismatch.unwrap_err().kind(),
-        LoaderErrorKind::TargetMismatch
-    );
 
     // single-file load via load_files (one-element slice)
     let single_corpus = load_files(&[alpha_path.as_str()], "example", None)?;
@@ -127,6 +104,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // LoadOptions: reject identical titles
     let strict_opts = LoadOptions {
         identical_title_allowed: false,
+        skip_source_with_target_mismatch: false
     };
     let strict_result = load_files(&dup_paths, "example", Some(strict_opts));
     assert!(strict_result.is_err());

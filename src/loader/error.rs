@@ -12,6 +12,7 @@ pub enum LoaderErrorKind {
     TargetMismatch,
     OptionViolation,
     InvalidInput,
+    RuleParamsMissing
 }
 
 #[derive(Debug)]
@@ -37,6 +38,8 @@ pub enum LoaderError {
     OptionViolation(String),
     /// invalid arguments supplied to a load entrypoint.
     InvalidInput(String),
+    /// rule has missing params
+    RuleParamsMissing(String)
 }
 
 impl fmt::Display for LoaderError {
@@ -61,6 +64,7 @@ impl fmt::Display for LoaderError {
             }
             LoaderError::OptionViolation(msg) => write!(f, "{msg}"),
             LoaderError::InvalidInput(msg) => write!(f, "{msg}"),
+            LoaderError::RuleParamsMissing(msg) => write!(f, "{msg}")
         }
     }
 }
@@ -94,6 +98,7 @@ impl LoaderError {
             LoaderError::TargetMismatch { .. } => LoaderErrorKind::TargetMismatch,
             LoaderError::OptionViolation(_) => LoaderErrorKind::OptionViolation,
             LoaderError::InvalidInput(_) => LoaderErrorKind::InvalidInput,
+            LoaderError::RuleParamsMissing(_) => LoaderErrorKind::RuleParamsMissing
         }
     }
 
