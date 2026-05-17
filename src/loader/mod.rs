@@ -4,7 +4,7 @@ pub mod error;
 
 use std::path::Path;
 
-use crate::{Document, DocumentMetadata, Field, Section, corpus::Corpus};
+use crate::corpus::{Corpus, types::{Document, DocumentMetadata, Field, Section}};
 
 use error::LoaderError;
 

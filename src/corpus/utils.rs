@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use sha2::{Digest, Sha256};
 
-use crate::{Document, corpus::{PooledValue, ValuePool, ValueProvenance}};
+use crate::corpus::{PooledValue, ValuePool, ValueProvenance, types::Document};
 
 /// hashes canonicalized source content with target context for stable identity.
 pub(crate) fn hash_source_content(target: &str, raw: &str) -> String {

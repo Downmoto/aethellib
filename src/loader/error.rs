@@ -2,7 +2,7 @@
 
 use std::{fmt, path::Path};
 
-use crate::Target;
+use crate::corpus::types::Target;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// stable machine-readable loader error categories.

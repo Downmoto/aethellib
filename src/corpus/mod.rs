@@ -1,8 +1,9 @@
 pub(crate) mod utils;
+pub mod types;
 
 use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}};
 
-use crate::{Document, Target, corpus::utils::build_value_pools, loader::{LoadOptions, LoadValidator, error::LoaderError, parse_document}};
+use crate::{corpus::{types::{Document, Target}, utils::build_value_pools}, loader::{LoadOptions, LoadValidator, error::LoaderError, parse_document}};
 
 
 #[derive(Debug, Clone)]
@@ -263,7 +264,70 @@ impl CorpusBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::Corpus;
+    use crate::corpus::types::{Document, DocumentMetadata, Section};
+
+use super::Corpus;
+
+    fn doc(hash: &str, id: &str, target: &str) -> Document {
+        Document {
+            source_id: id.to_string(),
+            source_hash: hash.to_string(),
+            source_path: format!("/{id}.toml"),
+            metadata: DocumentMetadata {
+                title: id.to_string(),
+                target: target.to_string(),
+                desc: None,
+                author: None,
+                version: None,
+                schema: None,
+            },
+            sections: Vec::<Section>::new(),
+        }
+    }
+
+    #[test]
+    fn combine_appends_documents_and_renumbers_duplicate_hash_ids() {
+        let left = Corpus {
+            target: "weapon".to_string(),
+            documents: vec![doc("hash-a", "old-1", "weapon")],
+            pools: vec![],
+        };
+
+        let right = Corpus {
+            target: "weapon".to_string(),
+            documents: vec![
+                doc("hash-a", "old-2", "weapon"),
+                doc("hash-b", "old-3", "weapon"),
+            ],
+            pools: vec![],
+        };
+
+        let combined = left.combine(right);
+
+        assert_eq!(combined.target, "weapon");
+        assert_eq!(combined.documents.len(), 3);
+        assert_eq!(combined.documents[0].source_id, "hash-a");
+        assert_eq!(combined.documents[1].source_id, "hash-a:2");
+        assert_eq!(combined.documents[2].source_id, "hash-b");
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot combine corpora with different targets")]
+    fn combine_panics_for_different_targets() {
+        let left = Corpus {
+            target: "weapon".to_string(),
+            documents: vec![doc("hash-a", "old-1", "weapon")],
+            pools: vec![],
+        };
+
+        let right = Corpus {
+            target: "person".to_string(),
+            documents: vec![doc("hash-b", "old-2", "person")],
+            pools: vec![],
+        };
+
+        let _ = left.combine(right);
+    }
 
     #[test]
     fn pooled_values_lookup_keeps_same_field_names_separate_per_section() {
