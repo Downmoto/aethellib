@@ -171,7 +171,7 @@ pub struct CorpusBuilder {
     opts: LoadOptions,
     validator: Option<Box<dyn LoadValidator>>,
     pending: Vec<PendingSource>,
-    documents: Vec<Document>
+    documents: Vec<Document>,
 }
 
 impl CorpusBuilder {
@@ -274,7 +274,18 @@ impl CorpusBuilder {
             documents.push(doc);
         }
 
-        documents.extend(self.documents);
+        for value in &self.documents {
+            if value.metadata.target != self.target {
+                if self.opts.skip_source_with_target_mismatch {
+                    continue;
+                }
+                return Err(LoaderError::TargetMismatch {
+                    expected: self.target.clone(),
+                    found: value.metadata.target.clone(),
+                });
+            }
+            documents.push(value.clone());
+        }
         let pools = build_value_pools(&documents);
 
         Ok(Corpus {
@@ -432,9 +443,9 @@ first = ["al"]
 
     #[test]
     fn corpus_builder_add_document_successfully_appends_to_corpus() {
-       let doc = doc("hash-a", "old-2", "weapon");
+        let doc = doc("hash-a", "old-2", "weapon");
 
-       let corpus = Corpus::builder("weapon")
+        let corpus = Corpus::builder("weapon")
             .add_document(doc)
             .build()
             .expect("corpus should build");
