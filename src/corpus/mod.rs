@@ -171,6 +171,7 @@ pub struct CorpusBuilder {
     opts: LoadOptions,
     validator: Option<Box<dyn LoadValidator>>,
     pending: Vec<PendingSource>,
+    documents: Vec<Document>
 }
 
 impl CorpusBuilder {
@@ -180,6 +181,7 @@ impl CorpusBuilder {
             opts: LoadOptions::default(),
             validator: None,
             pending: Vec::new(),
+            documents: Vec::new(),
         }
     }
 
@@ -199,6 +201,11 @@ impl CorpusBuilder {
         self
     }
 
+    pub fn add_document(mut self, document: Document) -> Self {
+        self.documents.push(document);
+        self
+    }
+
     /// overrides the default load options.
     pub fn with_options(mut self, opts: LoadOptions) -> Self {
         self.opts = opts;
@@ -213,7 +220,7 @@ impl CorpusBuilder {
 
     /// resolves all queued sources and assembles them into a [`Corpus`].
     pub fn build(self) -> Result<Corpus, LoaderError> {
-        if self.pending.is_empty() {
+        if self.pending.is_empty() && self.documents.is_empty() {
             return Err(LoaderError::InvalidInput(
                 "at least one source is required to build a corpus".to_string(),
             ));
@@ -267,6 +274,7 @@ impl CorpusBuilder {
             documents.push(doc);
         }
 
+        documents.extend(self.documents);
         let pools = build_value_pools(&documents);
 
         Ok(Corpus {
@@ -420,5 +428,18 @@ first = ["al"]
                 .pooled_values_for_field_section("first", "aliases")
                 .is_none()
         );
+    }
+
+    #[test]
+    fn corpus_builder_add_document_successfully_appends_to_corpus() {
+       let doc = doc("hash-a", "old-2", "weapon");
+
+       let corpus = Corpus::builder("weapon")
+            .add_document(doc)
+            .build()
+            .expect("corpus should build");
+
+        assert!(!corpus.documents.is_empty());
+        assert_eq!(corpus.documents[0].metadata.target, "weapon")
     }
 }
