@@ -65,11 +65,12 @@ mod tests {
     }
 }
 
+type ValuePoolGroup = (Vec<PooledValue>, HashMap<String, usize>);
+
 /// builds pools keyed by exact section and field pairs, merging provenance for duplicate values.
 pub(crate) fn build_value_pools(documents: &[Document]) -> Vec<ValuePool> {
     // outer key: (section, field); inner key: value string → index in Vec<PooledValue>
-    let mut grouped: BTreeMap<(String, String), (Vec<PooledValue>, HashMap<String, usize>)> =
-        BTreeMap::new();
+    let mut grouped: BTreeMap<(String, String), ValuePoolGroup> = BTreeMap::new();
 
     for document in documents {
         for section in &document.sections {

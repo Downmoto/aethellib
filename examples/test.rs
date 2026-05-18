@@ -16,9 +16,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use aethellib::loader::error::LoaderErrorKind;
-use aethellib::prelude::{
-    Corpus, Document, LoadOptions, LoadValidator, LoaderError, load_files,
-};
+use aethellib::prelude::{Corpus, Document, LoadOptions, LoadValidator, LoaderError, load_files};
 
 struct FixtureDirGuard {
     path: PathBuf,
@@ -72,7 +70,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dup_one_path = write_fixture(fixture_dir.path(), "dup_one.toml", &raw_dup)?;
     let dup_two_path = write_fixture(fixture_dir.path(), "dup_two.toml", &raw_dup)?;
 
-
     // single-file load via load_files (one-element slice)
     let single_corpus = load_files(&[alpha_path.as_str()], "example", None)?;
     assert_eq!(single_corpus.target(), "example");
@@ -98,13 +95,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     // duplicate source hashes get unique ids
     let dup_paths = vec![dup_one_path.as_str(), dup_two_path.as_str()];
     let dup_corpus = load_files(&dup_paths, "example", None)?;
-    assert_eq!(dup_corpus.documents[0].source_id, dup_corpus.documents[0].source_hash);
+    assert_eq!(
+        dup_corpus.documents[0].source_id,
+        dup_corpus.documents[0].source_hash
+    );
     assert!(dup_corpus.documents[1].source_id.contains(':'));
 
     // LoadOptions: reject identical titles
     let strict_opts = LoadOptions {
         identical_title_allowed: false,
-        skip_source_with_target_mismatch: false
+        skip_source_with_target_mismatch: false,
     };
     let strict_result = load_files(&dup_paths, "example", Some(strict_opts));
     assert!(strict_result.is_err());
@@ -140,7 +140,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // CorpusBuilder: empty sources is an error
     let empty_result = Corpus::builder("example").build();
     assert!(empty_result.is_err());
-    assert_eq!(empty_result.unwrap_err().kind(), LoaderErrorKind::InvalidInput);
+    assert_eq!(
+        empty_result.unwrap_err().kind(),
+        LoaderErrorKind::InvalidInput
+    );
 
     // Corpus::combine merges two corpora
     let left = load_files(&[alpha_path.as_str()], "example", None)?;

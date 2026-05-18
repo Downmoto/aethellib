@@ -4,7 +4,10 @@ pub mod error;
 
 use std::path::Path;
 
-use crate::corpus::{Corpus, types::{Document, DocumentMetadata, Field, Section}};
+use crate::corpus::{
+    Corpus,
+    types::{Document, DocumentMetadata, Field, Section},
+};
 
 use error::LoaderError;
 
@@ -33,8 +36,6 @@ pub trait LoadValidator {
     /// validates one parsed document; return `Err` to reject it.
     fn validate(&self, document: &Document) -> Result<(), LoaderError>;
 }
-
-
 
 // ─── convenience entrypoints ─────────────────────────────────────────────────
 
@@ -76,7 +77,10 @@ pub fn load_files_with_validator(
 // ─── private document parsing ─────────────────────────────────────────────────
 
 /// parses raw TOML into `(DocumentMetadata, Vec<Section>)` without target validation.
-pub(crate) fn parse_document(name: &str, raw: &str) -> Result<(DocumentMetadata, Vec<Section>), LoaderError> {
+pub(crate) fn parse_document(
+    name: &str,
+    raw: &str,
+) -> Result<(DocumentMetadata, Vec<Section>), LoaderError> {
     let table: toml::Table = raw
         .parse()
         .map_err(|e| LoaderError::parse_for_path(name, e))?;
@@ -164,7 +168,6 @@ middle = ["an", "is", "or"]
 last = ["ton", "ric", "den", "vale"]
 "#;
 
-
     #[test]
     fn corpus_builder_assembles_multiple_str_sources() {
         let corpus = Corpus::builder("person")
@@ -175,7 +178,10 @@ last = ["ton", "ric", "den", "vale"]
 
         assert_eq!(corpus.target(), "person");
         assert_eq!(corpus.documents.len(), 2);
-        assert_eq!(corpus.documents[0].source_id, corpus.documents[0].source_hash);
+        assert_eq!(
+            corpus.documents[0].source_id,
+            corpus.documents[0].source_hash
+        );
         assert!(corpus.documents[1].source_id.contains(':'));
     }
 
@@ -189,7 +195,7 @@ last = ["ton", "ric", "den", "vale"]
     fn load_options_identical_title_rejected_when_disabled() {
         let opts = LoadOptions {
             identical_title_allowed: false,
-            skip_source_with_target_mismatch: false
+            skip_source_with_target_mismatch: false,
         };
         let err = Corpus::builder("person")
             .with_options(opts)

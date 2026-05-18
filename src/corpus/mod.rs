@@ -1,10 +1,19 @@
-pub(crate) mod utils;
 pub mod types;
+pub(crate) mod utils;
 
-use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+};
 
-use crate::{corpus::{types::{Document, Target}, utils::build_value_pools}, loader::{LoadOptions, LoadValidator, error::LoaderError, parse_document}};
-
+use crate::{
+    corpus::{
+        types::{Document, Target},
+        utils::build_value_pools,
+    },
+    loader::{LoadOptions, LoadValidator, error::LoaderError, parse_document},
+};
 
 #[derive(Debug, Clone)]
 /// tracks where one pooled value came from.
@@ -35,7 +44,7 @@ pub struct ValuePool {
     pub section: String,
     /// field name for this pool.
     pub field: String,
-    values: Vec<PooledValue>
+    values: Vec<PooledValue>,
 }
 
 impl ValuePool {
@@ -53,7 +62,7 @@ pub struct Corpus {
     /// source documents in first-seen order.
     pub documents: Vec<Document>,
     /// pools of values based of section -> field.
-    pub pools: Vec<ValuePool>
+    pub pools: Vec<ValuePool>,
 }
 
 impl Corpus {
@@ -72,12 +81,12 @@ impl Corpus {
         let Corpus {
             target,
             mut documents,
-            pools: _
+            pools: _,
         } = self;
         let Corpus {
             target: other_target,
             documents: other_documents,
-            pools: _
+            pools: _,
         } = other;
 
         assert_eq!(
@@ -104,7 +113,11 @@ impl Corpus {
 
         let pools = build_value_pools(&documents);
 
-        Self { target, documents, pools }
+        Self {
+            target,
+            documents,
+            pools,
+        }
     }
 
     /// returns all source ids in corpus order.
@@ -131,7 +144,11 @@ impl Corpus {
     }
 
     /// returns pooled values for one exact section and field pair.
-    pub fn pooled_values_for_field_section(&self, field: &str, section: &str) -> Option<&[PooledValue]> {
+    pub fn pooled_values_for_field_section(
+        &self,
+        field: &str,
+        section: &str,
+    ) -> Option<&[PooledValue]> {
         self.pools
             .iter()
             .find(|pool| pool.field == field && pool.section == section)
@@ -218,13 +235,11 @@ impl CorpusBuilder {
 
             let (metadata, sections) = parse_document(&source_path, &raw)?;
 
-            if metadata.target != self.target {
-                if !self.opts.skip_source_with_target_mismatch {
-                    return Err(LoaderError::TargetMismatch {
-                        expected: self.target.clone(),
-                        found: metadata.target,
-                    });
-                }
+            if metadata.target != self.target && !self.opts.skip_source_with_target_mismatch {
+                return Err(LoaderError::TargetMismatch {
+                    expected: self.target.clone(),
+                    found: metadata.target,
+                });
             }
 
             if !self.opts.identical_title_allowed && !seen_titles.insert(metadata.title.clone()) {
@@ -266,7 +281,7 @@ impl CorpusBuilder {
 mod tests {
     use crate::corpus::types::{Document, DocumentMetadata, Section};
 
-use super::Corpus;
+    use super::Corpus;
 
     fn doc(hash: &str, id: &str, target: &str) -> Document {
         Document {
