@@ -1,7 +1,7 @@
 use aethellib::prelude::*;
 
 fn main() {
-    let c = load_files(
+    let c = Corpus::from_files(
         &[
             "data/weapon_merge_part_1.toml",
             "data/weapon_merge_part_2.toml",
@@ -11,7 +11,7 @@ fn main() {
         "weapon",
         None,
     )
-    .unwrap();
+    .expect("should read files and unwrap to Corpus");
 
     let c2 = Corpus::builder("weapon")
         .add_document(Document {

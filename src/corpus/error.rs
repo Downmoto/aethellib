@@ -6,7 +6,7 @@ use crate::corpus::types::Target;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// stable machine-readable loader error categories.
-pub enum LoaderErrorKind {
+pub enum CorpusLoaderErrorKind {
     Read,
     Parse,
     TargetMismatch,
@@ -17,7 +17,7 @@ pub enum LoaderErrorKind {
 
 #[derive(Debug)]
 /// errors returned by all load entrypoints.
-pub enum LoaderError {
+pub enum CorpusLoaderError {
     /// file system read failure.
     ReadError {
         /// optional source file path if available.
@@ -42,75 +42,75 @@ pub enum LoaderError {
     RuleParamsMissing(String),
 }
 
-impl fmt::Display for LoaderError {
+impl fmt::Display for CorpusLoaderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LoaderError::ReadError { path, source } => {
+        match &self {
+            &CorpusLoaderError::ReadError { path, source } => {
                 if let Some(path) = path {
                     write!(f, "unable to read toml file '{path}': {source}")
                 } else {
                     write!(f, "unable to read toml file: {source}")
                 }
             }
-            LoaderError::ParseError { path, source } => {
+            CorpusLoaderError::ParseError { path, source } => {
                 if let Some(path) = path {
                     write!(f, "unable to parse toml file '{path}': {source}")
                 } else {
                     write!(f, "unable to parse toml file: {source}")
                 }
             }
-            LoaderError::TargetMismatch { expected, found } => {
+            CorpusLoaderError::TargetMismatch { expected, found } => {
                 write!(f, "target mismatch: expected '{expected}', got '{found}'")
             }
-            LoaderError::OptionViolation(msg) => write!(f, "{msg}"),
-            LoaderError::InvalidInput(msg) => write!(f, "{msg}"),
-            LoaderError::RuleParamsMissing(msg) => write!(f, "{msg}"),
+            CorpusLoaderError::OptionViolation(msg) => write!(f, "{msg}"),
+            CorpusLoaderError::InvalidInput(msg) => write!(f, "{msg}"),
+            CorpusLoaderError::RuleParamsMissing(msg) => write!(f, "{msg}"),
         }
     }
 }
 
-impl std::error::Error for LoaderError {}
+impl std::error::Error for CorpusLoaderError {}
 
-impl From<std::io::Error> for LoaderError {
+impl From<std::io::Error> for CorpusLoaderError {
     fn from(value: std::io::Error) -> Self {
-        LoaderError::ReadError {
+        CorpusLoaderError::ReadError {
             path: None,
             source: value,
         }
     }
 }
 
-impl From<toml::de::Error> for LoaderError {
+impl From<toml::de::Error> for CorpusLoaderError {
     fn from(value: toml::de::Error) -> Self {
-        LoaderError::ParseError {
+        CorpusLoaderError::ParseError {
             path: None,
             source: value,
         }
     }
 }
 
-impl LoaderError {
+impl CorpusLoaderError {
     /// returns the stable machine-readable kind for this error.
-    pub fn kind(&self) -> LoaderErrorKind {
+    pub fn kind(&self) -> CorpusLoaderErrorKind {
         match self {
-            LoaderError::ReadError { .. } => LoaderErrorKind::Read,
-            LoaderError::ParseError { .. } => LoaderErrorKind::Parse,
-            LoaderError::TargetMismatch { .. } => LoaderErrorKind::TargetMismatch,
-            LoaderError::OptionViolation(_) => LoaderErrorKind::OptionViolation,
-            LoaderError::InvalidInput(_) => LoaderErrorKind::InvalidInput,
-            LoaderError::RuleParamsMissing(_) => LoaderErrorKind::RuleParamsMissing,
+            CorpusLoaderError::ReadError { .. } => CorpusLoaderErrorKind::Read,
+            CorpusLoaderError::ParseError { .. } => CorpusLoaderErrorKind::Parse,
+            CorpusLoaderError::TargetMismatch { .. } => CorpusLoaderErrorKind::TargetMismatch,
+            CorpusLoaderError::OptionViolation(_) => CorpusLoaderErrorKind::OptionViolation,
+            CorpusLoaderError::InvalidInput(_) => CorpusLoaderErrorKind::InvalidInput,
+            CorpusLoaderError::RuleParamsMissing(_) => CorpusLoaderErrorKind::RuleParamsMissing,
         }
     }
 
     pub(crate) fn read_for_path(path: impl AsRef<Path>, source: std::io::Error) -> Self {
-        LoaderError::ReadError {
+        CorpusLoaderError::ReadError {
             path: Some(path.as_ref().to_string_lossy().to_string()),
             source,
         }
     }
 
     pub(crate) fn parse_for_path(path: impl AsRef<Path>, source: toml::de::Error) -> Self {
-        LoaderError::ParseError {
+        CorpusLoaderError::ParseError {
             path: Some(path.as_ref().to_string_lossy().to_string()),
             source,
         }
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_display_formats_target_mismatch() {
-        let error = LoaderError::TargetMismatch {
+        let error = CorpusLoaderError::TargetMismatch {
             expected: "weapon".to_string(),
             found: "person".to_string(),
         };
@@ -132,12 +132,12 @@ mod tests {
             error.to_string(),
             "target mismatch: expected 'weapon', got 'person'"
         );
-        assert_eq!(error.kind(), LoaderErrorKind::TargetMismatch);
+        assert_eq!(error.kind(), CorpusLoaderErrorKind::TargetMismatch);
     }
 
     #[test]
     fn test_read_for_path_includes_path_in_message() {
-        let error = LoaderError::read_for_path(
+        let error = CorpusLoaderError::read_for_path(
             "custom-file.toml",
             std::io::Error::new(std::io::ErrorKind::NotFound, "missing"),
         );
@@ -145,22 +145,22 @@ mod tests {
         assert!(error.to_string().contains("custom-file.toml"));
         assert!(matches!(
             error,
-            LoaderError::ReadError { path: Some(_), .. }
+            CorpusLoaderError::ReadError { path: Some(_), .. }
         ));
-        assert_eq!(error.kind(), LoaderErrorKind::Read);
+        assert_eq!(error.kind(), CorpusLoaderErrorKind::Read);
     }
 
     #[test]
     fn test_option_violation_kind() {
-        let error = LoaderError::OptionViolation("some constraint".to_string());
+        let error = CorpusLoaderError::OptionViolation("some constraint".to_string());
         assert_eq!(error.to_string(), "some constraint");
-        assert_eq!(error.kind(), LoaderErrorKind::OptionViolation);
+        assert_eq!(error.kind(), CorpusLoaderErrorKind::OptionViolation);
     }
 
     #[test]
     fn test_invalid_input_kind() {
-        let error = LoaderError::InvalidInput("bad input".to_string());
+        let error = CorpusLoaderError::InvalidInput("bad input".to_string());
         assert_eq!(error.to_string(), "bad input");
-        assert_eq!(error.kind(), LoaderErrorKind::InvalidInput);
+        assert_eq!(error.kind(), CorpusLoaderErrorKind::InvalidInput);
     }
 }

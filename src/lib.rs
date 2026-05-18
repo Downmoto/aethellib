@@ -2,8 +2,6 @@
 
 /// corpus module entrypoint.
 pub mod corpus;
-/// loader module entrypoint.
-pub mod loader;
 /// rules module entrypoint.
 pub mod rules;
 
@@ -12,6 +10,6 @@ pub mod prelude {
 
     pub use crate::corpus::types::{Document, DocumentMetadata, Field, Section, Target};
     pub use crate::corpus::{Corpus, CorpusBuilder, PooledValue, ValuePool, ValueProvenance};
-    pub use crate::loader::error::{LoaderError, LoaderErrorKind};
-    pub use crate::loader::{LoadOptions, LoadValidator, load_files, load_files_with_validator};
+    pub use crate::corpus::error::{CorpusLoaderError, CorpusLoaderErrorKind};
+    pub use crate::corpus::utils::{CorpusLoaderOptions, LoadValidator};
 }

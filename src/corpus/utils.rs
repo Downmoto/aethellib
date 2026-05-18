@@ -4,7 +4,105 @@ use std::collections::{BTreeMap, HashMap};
 
 use sha2::{Digest, Sha256};
 
-use crate::corpus::{PooledValue, ValuePool, ValueProvenance, types::Document};
+use crate::corpus::{
+    PooledValue, ValuePool, ValueProvenance,
+    error::CorpusLoaderError,
+    types::{Document, DocumentMetadata, Field, Section},
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// configurable load behaviour applied during corpus assembly.
+pub struct CorpusLoaderOptions {
+    /// when `false`, duplicate `header.title` values across source files are rejected.
+    pub identical_title_allowed: bool,
+    /// when `true` consumes error when a source does not have a matching target and does not add it to [`Corpus`]
+    pub skip_source_with_target_mismatch: bool,
+}
+
+impl Default for CorpusLoaderOptions {
+    fn default() -> Self {
+        Self {
+            identical_title_allowed: true,
+            skip_source_with_target_mismatch: false,
+        }
+    }
+}
+
+/// optional validation hook applied to each document before it enters the corpus.
+pub trait LoadValidator {
+    /// validates one parsed document; return `Err` to reject it.
+    fn validate(&self, document: &Document) -> Result<(), CorpusLoaderError>;
+}
+
+/// parses raw TOML into `(DocumentMetadata, Vec<Section>)` without target validation.
+pub(crate) fn parse_document(
+    name: &str,
+    raw: &str,
+) -> Result<(DocumentMetadata, Vec<Section>), CorpusLoaderError> {
+    let table: toml::Table = raw
+        .parse()
+        .map_err(|e| CorpusLoaderError::parse_for_path(name, e))?;
+
+    let header_val = table.get("header").ok_or_else(|| {
+        CorpusLoaderError::InvalidInput(format!("'{name}' is missing a [header] table"))
+    })?;
+
+    let metadata: DocumentMetadata = header_val
+        .clone()
+        .try_into()
+        .map_err(|e| CorpusLoaderError::parse_for_path(name, e))?;
+
+    let mut sections: Vec<Section> = Vec::new();
+    for (key, value) in &table {
+        if key == "header" {
+            continue;
+        }
+        sections.push(parse_section(name, key, value)?);
+    }
+
+    Ok((metadata, sections))
+}
+
+/// parses one TOML table value into a [`Section`].
+fn parse_section(
+    name: &str,
+    title: &str,
+    value: &toml::Value,
+) -> Result<Section, CorpusLoaderError> {
+    let table = match value {
+        toml::Value::Table(t) => t,
+        _ => {
+            return Err(CorpusLoaderError::InvalidInput(format!(
+                "'{name}': section '{title}' must be a TOML table"
+            )));
+        }
+    };
+
+    let mut fields: Vec<Field> = Vec::new();
+    for (key, val) in table {
+        if let toml::Value::Array(arr) = val {
+            let strings: Vec<String> = arr
+                .iter()
+                .filter_map(|v| {
+                    if let toml::Value::String(s) = v {
+                        Some(s.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            fields.push(Field {
+                title: key.clone(),
+                values: strings,
+            });
+        }
+    }
+
+    Ok(Section {
+        title: title.to_string(),
+        fields,
+    })
+}
 
 /// hashes canonicalized source content with target context for stable identity.
 pub(crate) fn hash_source_content(target: &str, raw: &str) -> String {

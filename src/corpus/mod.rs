@@ -1,3 +1,4 @@
+pub mod error;
 pub mod types;
 pub(crate) mod utils;
 
@@ -7,12 +8,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{
-    corpus::{
-        types::{Document, Target},
-        utils::build_value_pools,
-    },
-    loader::{LoadOptions, LoadValidator, error::LoaderError, parse_document},
+use crate::corpus::{
+    error::CorpusLoaderError,
+    types::{Document, Target},
+    utils::{CorpusLoaderOptions, LoadValidator, build_value_pools, parse_document},
 };
 
 #[derive(Debug, Clone)]
@@ -69,6 +68,41 @@ impl Corpus {
     /// returns a new corpus builder for the given target.
     pub fn builder(target: impl Into<String>) -> CorpusBuilder {
         CorpusBuilder::new(target.into())
+    }
+
+    /// loads one or more TOML files for `target` and assembles them into a [`Corpus`].
+    ///
+    /// a single-file load is just a one-element slice.
+    pub fn from_files(
+        paths: &[impl AsRef<Path>],
+        target: &str,
+        opts: Option<CorpusLoaderOptions>,
+    ) -> Result<Corpus, CorpusLoaderError> {
+        let mut builder = Corpus::builder(target);
+        if let Some(opts) = opts {
+            builder = builder.with_options(opts);
+        }
+        for path in paths {
+            builder = builder.add_file(path);
+        }
+        builder.build()
+    }
+
+    /// loads one or more TOML files for `target` using a custom validation hook.
+    pub fn from_files_with_validator(
+        paths: &[impl AsRef<Path>],
+        target: &str,
+        opts: Option<CorpusLoaderOptions>,
+        validator: impl LoadValidator + 'static,
+    ) -> Result<Corpus, CorpusLoaderError> {
+        let mut builder = Corpus::builder(target).with_validator(validator);
+        if let Some(opts) = opts {
+            builder = builder.with_options(opts);
+        }
+        for path in paths {
+            builder = builder.add_file(path);
+        }
+        builder.build()
     }
 
     /// returns the target represented by this corpus.
@@ -168,7 +202,7 @@ enum PendingSource {
 /// obtain one via [`Corpus::builder`].
 pub struct CorpusBuilder {
     target: String,
-    opts: LoadOptions,
+    opts: CorpusLoaderOptions,
     validator: Option<Box<dyn LoadValidator>>,
     pending: Vec<PendingSource>,
     documents: Vec<Document>,
@@ -178,7 +212,7 @@ impl CorpusBuilder {
     pub(crate) fn new(target: String) -> Self {
         Self {
             target,
-            opts: LoadOptions::default(),
+            opts: CorpusLoaderOptions::default(),
             validator: None,
             pending: Vec::new(),
             documents: Vec::new(),
@@ -207,7 +241,7 @@ impl CorpusBuilder {
     }
 
     /// overrides the default load options.
-    pub fn with_options(mut self, opts: LoadOptions) -> Self {
+    pub fn with_options(mut self, opts: CorpusLoaderOptions) -> Self {
         self.opts = opts;
         self
     }
@@ -219,9 +253,9 @@ impl CorpusBuilder {
     }
 
     /// resolves all queued sources and assembles them into a [`Corpus`].
-    pub fn build(self) -> Result<Corpus, LoaderError> {
+    pub fn build(self) -> Result<Corpus, CorpusLoaderError> {
         if self.pending.is_empty() && self.documents.is_empty() {
-            return Err(LoaderError::InvalidInput(
+            return Err(CorpusLoaderError::InvalidInput(
                 "at least one source is required to build a corpus".to_string(),
             ));
         }
@@ -234,7 +268,7 @@ impl CorpusBuilder {
             let (source_path, raw) = match pending {
                 PendingSource::File(path) => {
                     let raw = fs::read_to_string(path)
-                        .map_err(|e| LoaderError::read_for_path(path, e))?;
+                        .map_err(|e| CorpusLoaderError::read_for_path(path, e))?;
                     (path.to_string_lossy().to_string(), raw)
                 }
                 PendingSource::Str { name, raw } => (name.clone(), raw.clone()),
@@ -243,14 +277,14 @@ impl CorpusBuilder {
             let (metadata, sections) = parse_document(&source_path, &raw)?;
 
             if metadata.target != self.target && !self.opts.skip_source_with_target_mismatch {
-                return Err(LoaderError::TargetMismatch {
+                return Err(CorpusLoaderError::TargetMismatch {
                     expected: self.target.clone(),
                     found: metadata.target,
                 });
             }
 
             if !self.opts.identical_title_allowed && !seen_titles.insert(metadata.title.clone()) {
-                return Err(LoaderError::OptionViolation(format!(
+                return Err(CorpusLoaderError::OptionViolation(format!(
                     "duplicate header.title '{}' is not allowed when identical_title_allowed is false",
                     metadata.title
                 )));
@@ -279,7 +313,7 @@ impl CorpusBuilder {
                 if self.opts.skip_source_with_target_mismatch {
                     continue;
                 }
-                return Err(LoaderError::TargetMismatch {
+                return Err(CorpusLoaderError::TargetMismatch {
                     expected: self.target.clone(),
                     found: value.metadata.target.clone(),
                 });
