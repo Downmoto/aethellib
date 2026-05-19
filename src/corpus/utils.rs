@@ -15,7 +15,7 @@ use crate::corpus::{
 pub struct CorpusLoaderOptions {
     /// when `false`, duplicate `header.title` values across source files are rejected.
     pub identical_title_allowed: bool,
-    /// when `true` consumes error when a source does not have a matching target and does not add it to [`Corpus`]
+    /// When `true`, sources whose `[header].target` does not match are skipped instead of returning [`CorpusLoaderError::TargetMismatch`].
     pub skip_source_with_target_mismatch: bool,
 }
 

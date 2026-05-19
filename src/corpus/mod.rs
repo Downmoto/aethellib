@@ -276,7 +276,10 @@ impl CorpusBuilder {
 
             let (metadata, sections) = parse_document(&source_path, &raw)?;
 
-            if metadata.target != self.target && !self.opts.skip_source_with_target_mismatch {
+            if metadata.target != self.target {
+                if self.opts.skip_source_with_target_mismatch {
+                    continue;
+                }
                 return Err(CorpusLoaderError::TargetMismatch {
                     expected: self.target.clone(),
                     found: metadata.target,
@@ -318,7 +321,25 @@ impl CorpusBuilder {
                     found: value.metadata.target.clone(),
                 });
             }
-            documents.push(value.clone());
+
+            if !self.opts.identical_title_allowed
+                && !seen_titles.insert(value.metadata.title.clone())
+            {
+                return Err(CorpusLoaderError::OptionViolation(format!(
+                    "duplicate header.title '{}' is not allowed when identical_title_allowed is false",
+                    value.metadata.title
+                )));
+            }
+
+            let mut doc = value.clone();
+            doc.source_id =
+                utils::make_unique_source_id(&doc.source_hash, &mut seen_source_ids);
+
+            if let Some(validator) = &self.validator {
+                validator.validate(&doc)?;
+            }
+
+            documents.push(doc);
         }
         let pools = build_value_pools(&documents);
 

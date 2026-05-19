@@ -44,8 +44,8 @@ pub enum CorpusLoaderError {
 
 impl fmt::Display for CorpusLoaderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            &CorpusLoaderError::ReadError { path, source } => {
+        match self {
+            CorpusLoaderError::ReadError { path, source } => {
                 if let Some(path) = path {
                     write!(f, "unable to read toml file '{path}': {source}")
                 } else {
