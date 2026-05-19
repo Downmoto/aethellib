@@ -1,5 +1,5 @@
 [header]
-name = "weapon test set"
+title = "weapon test set"
 target = "weapon"
 desc = "test data for aethellib"
 author = "Arad Fadaei"
