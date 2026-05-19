@@ -34,6 +34,12 @@ pub trait LoadValidator {
     fn validate(&self, document: &Document) -> Result<(), CorpusLoaderError>;
 }
 
+impl LoadValidator for Box<dyn LoadValidator> {
+    fn validate(&self, document: &Document) -> Result<(), CorpusLoaderError> {
+        (**self).validate(document)
+    }
+}
+
 /// parses raw TOML into `(DocumentMetadata, Vec<Section>)` without target validation.
 pub(crate) fn parse_document(
     name: &str,

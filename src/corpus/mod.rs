@@ -72,36 +72,27 @@ impl Corpus {
 
     /// loads one or more TOML files for `target` and assembles them into a [`Corpus`].
     ///
-    /// a single-file load is just a one-element slice.
+    /// pass `Some(Box::new(my_validator))` to attach a validation hook, or `None` to skip.
     pub fn from_files(
         paths: &[impl AsRef<Path>],
         target: &str,
         opts: Option<CorpusLoaderOptions>,
+        validator: Option<Box<dyn LoadValidator>>,
     ) -> Result<Corpus, CorpusLoaderError> {
         let mut builder = Corpus::builder(target);
-        if let Some(opts) = opts {
-            builder = builder.with_options(opts);
-        }
-        for path in paths {
-            builder = builder.add_file(path);
-        }
-        builder.build()
-    }
 
-    /// loads one or more TOML files for `target` using a custom validation hook.
-    pub fn from_files_with_validator(
-        paths: &[impl AsRef<Path>],
-        target: &str,
-        opts: Option<CorpusLoaderOptions>,
-        validator: impl LoadValidator + 'static,
-    ) -> Result<Corpus, CorpusLoaderError> {
-        let mut builder = Corpus::builder(target).with_validator(validator);
+        if let Some(validator) = validator {
+            builder = builder.with_validator(validator);
+        }
+
         if let Some(opts) = opts {
             builder = builder.with_options(opts);
         }
+
         for path in paths {
             builder = builder.add_file(path);
         }
+
         builder.build()
     }
 
@@ -332,8 +323,7 @@ impl CorpusBuilder {
             }
 
             let mut doc = value.clone();
-            doc.source_id =
-                utils::make_unique_source_id(&doc.source_hash, &mut seen_source_ids);
+            doc.source_id = utils::make_unique_source_id(&doc.source_hash, &mut seen_source_ids);
 
             if let Some(validator) = &self.validator {
                 validator.validate(&doc)?;

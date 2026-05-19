@@ -10,6 +10,7 @@ fn main() {
         ],
         "weapon",
         None,
+        None
     )
     .expect("should read files and unwrap to Corpus");
 
