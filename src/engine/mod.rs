@@ -8,7 +8,7 @@ use rand::Rng;
 use crate::corpus::{Corpus, ValueProvenance};
 pub use error::AethelError;
 
-// ─── ComposedValue ────────────────────────────────────────────────────────────
+// == ComposedValue ============================================================
 
 #[derive(Debug, Clone)]
 /// the final or intermediate result of a generation step.
@@ -26,7 +26,7 @@ impl ComposedValue {
     }
 }
 
-// ─── GenerationContext ────────────────────────────────────────────────────────
+// == GenerationContext ========================================================
 
 /// the shared state blackboard passed to every generation rule during execution.
 pub struct GenerationContext<'a> {
@@ -50,7 +50,7 @@ impl<'a> GenerationContext<'a> {
     }
 }
 
-// ─── Rule ─────────────────────────────────────────────────────────────────────
+// == Rule =====================================================================
 
 /// the base interface for all generation logic.
 pub trait Rule {
@@ -65,7 +65,7 @@ pub trait Rule {
     ) -> Result<ComposedValue, AethelError>;
 }
 
-// ─── CustomRule ───────────────────────────────────────────────────────────────
+// == InlineRule ===============================================================
 
 /// wraps a closure as a [`Rule`], allowing inline rule definitions without
 /// implementing the trait directly.
@@ -100,7 +100,7 @@ where
     }
 }
 
-// ─── Engine ───────────────────────────────────────────────────────────────────
+// == Engine ===================================================================
 
 /// orchestrates an ordered sequence of [`Rule`]s against a [`Corpus`] using a
 /// seeded RNG to ensure deterministic outputs.
