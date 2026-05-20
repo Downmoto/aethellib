@@ -69,12 +69,12 @@ pub trait Rule {
 
 /// wraps a closure as a [`Rule`], allowing inline rule definitions without
 /// implementing the trait directly.
-pub struct CustomRule<F> {
+pub struct InlineRule<F> {
     name: String,
     logic: F,
 }
 
-impl<F> CustomRule<F> {
+impl<F> InlineRule<F> {
     pub fn new(name: impl Into<String>, logic: F) -> Self {
         Self {
             name: name.into(),
@@ -83,7 +83,7 @@ impl<F> CustomRule<F> {
     }
 }
 
-impl<F> Rule for CustomRule<F>
+impl<F> Rule for InlineRule<F>
 where
     F: for<'a> Fn(&GenerationContext<'a>, &mut dyn Rng) -> Result<ComposedValue, AethelError>,
 {

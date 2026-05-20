@@ -2,7 +2,7 @@
 
 use rand::Rng;
 
-use super::{AethelError, ComposedValue, CustomRule, GenerationContext, Rule};
+use super::{AethelError, ComposedValue, InlineRule, GenerationContext, Rule};
 
 /// selects a random value from the pool identified by `section` and `field`.
 pub fn pick(
@@ -10,7 +10,7 @@ pub fn pick(
     section: String,
     field: String,
 ) -> impl Rule + 'static {
-    CustomRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
         let values = ctx
             .corpus
             .pooled_values_for_field_section(&field, &section)
@@ -39,7 +39,7 @@ pub fn concat(
     rule_a: impl Rule + 'static,
     rule_b: impl Rule + 'static,
 ) -> impl Rule + 'static {
-    CustomRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
         let val_a = rule_a.execute(ctx, rng)?;
         let val_b = rule_b.execute(ctx, rng)?;
         Ok(val_a.merge(val_b))
@@ -52,7 +52,7 @@ pub fn fallback(
     primary: impl Rule + 'static,
     secondary: impl Rule + 'static,
 ) -> impl Rule + 'static {
-    CustomRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
         match primary.execute(ctx, rng) {
             Ok(val) => Ok(val),
             Err(_) => secondary.execute(ctx, rng),
@@ -67,7 +67,7 @@ pub fn weighted_choice(
     name: impl Into<String>,
     choices: Vec<(u32, Box<dyn Rule>)>,
 ) -> impl Rule + 'static {
-    CustomRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
         let total_weight: u32 = choices.iter().map(|(w, _)| w).sum();
 
         if total_weight == 0 {
@@ -98,7 +98,7 @@ pub fn chance(
     probability: f64,
     rule: impl Rule + 'static,
 ) -> impl Rule + 'static {
-    CustomRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
         let roll = (rng.next_u32() as f64) / (u32::MAX as f64);
 
         if roll <= probability {
@@ -113,7 +113,7 @@ pub fn chance(
 }
 /// returns a rule that always produces a fixed string with no provenance.
 pub fn lit(text: &'static str) -> impl Rule + 'static {
-    CustomRule::new(text, move |_ctx: &GenerationContext<'_>, _rng: &mut dyn Rng| {
+    InlineRule::new(text, move |_ctx: &GenerationContext<'_>, _rng: &mut dyn Rng| {
         Ok(ComposedValue {
             value: text.to_string(),
             provenance: vec![],
