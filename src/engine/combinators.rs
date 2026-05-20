@@ -111,3 +111,12 @@ pub fn chance(
         }
     })
 }
+/// returns a rule that always produces a fixed string with no provenance.
+pub fn lit(text: &'static str) -> impl Rule + 'static {
+    CustomRule::new(text, move |_ctx: &GenerationContext<'_>, _rng: &mut dyn Rng| {
+        Ok(ComposedValue {
+            value: text.to_string(),
+            provenance: vec![],
+        })
+    })
+}

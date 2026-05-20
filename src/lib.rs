@@ -15,5 +15,5 @@ pub mod prelude {
 
     pub use crate::engine::{ComposedValue, CustomRule, Engine, GenerationContext, Rule};
     pub use crate::engine::error::AethelError;
-    pub use crate::engine::combinators::{chance, concat, fallback, pick, weighted_choice};
+    pub use crate::engine::combinators::{chance, concat, fallback, pick, weighted_choice, lit};
 }

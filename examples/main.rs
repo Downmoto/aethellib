@@ -1,15 +1,5 @@
 use aethellib::prelude::*;
-use rand::Rng;
 
-/// returns a rule that always produces a fixed string with no provenance.
-fn lit(text: &'static str) -> impl Rule + 'static {
-    CustomRule::new(text, move |_ctx: &GenerationContext<'_>, _rng: &mut dyn Rng| {
-        Ok(ComposedValue {
-            value: text.to_string(),
-            provenance: vec![],
-        })
-    })
-}
 
 fn main() {
     let corpus = Corpus::from_files(
@@ -66,8 +56,7 @@ fn main() {
     let get = |key: &str| ctx.get_previous(key).unwrap().value.as_str();
 
     println!("─ Generated Weapon ─────────────────────────────────");
-    println!("  Name       {}", get("weapon_name"));
-    println!("  Element    {}", get("element"));
+    println!("  Name       {} {}", get("element"), get("weapon_name"));
     println!("  Rarity     {} · {}", get("rarity"), get("condition"));
     println!("  Material   {}, {}", get("material"), get("accent"));
 }
