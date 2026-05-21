@@ -7,17 +7,17 @@ the api may change between minor releases while architecture settles.
 
 ## status
 
-- current crate version: 0.5.0
+- current crate version: 0.8.1
 - release stability target: 1.0.0
 - this readme is intentionally minimal until 1.0
 
 ## project direction
 
-aethellib is now focused on reusable primitives for building your own target loaders and generators:
+aethellib is now focused on reusable primitives for loading target-specific corpora and running composable text generation rules:
 
 - typed document loading and target validation
 - single-target corpus merging with source provenance metadata
-- generation trait surface for runtime generation workflows
+- generation engine with composable combinators
 
 it does not aim to be a mixed-target orchestration framework.
 if you need mixed-target handling, do that grouping and dispatch in your own binary or library layer.
@@ -39,48 +39,68 @@ aethellib = { git = "https://github.com/Downmoto/aethellib", branch = "master" }
 
 ## current quick start
 
-implement a loader:
+load a corpus from one or more TOML files:
 
 ```rust
-use serde::Deserialize;
-use aethellib::loader::TargetedLoader;
+use aethellib::prelude::*;
 
-#[derive(Debug, Deserialize)]
-struct MyLoader {
-	// your target-specific sections here
-}
-
-impl TargetedLoader for MyLoader {
-	const TARGET: &'static str = "my-target";
-}
+let corpus = Corpus::from_files(
+	&["data/weapon_test_data.toml"],
+	"weapon",
+	None,
+	None,
+)?;
 ```
 
-merge source files into a typed corpus:
+run generation rules with the engine:
 
 ```rust
-use aethellib::merger::merge_files;
+use aethellib::prelude::*;
+use aethellib::engine::combinators::{chance, concat, lit, pick, weighted_choice};
 
-let paths = vec!["data/a.toml", "data/b.toml"];
-let corpus = merge_files::<MyLoader>(&paths, None)?;
+let ctx = Engine::new(&corpus, rand::rng())
+	.with_rule(concat(
+		"weapon_name",
+		pick("px", "name".to_string(), "prefix".to_string()),
+		pick("ty", "type".to_string(), "type".to_string()),
+	))
+	.with_rule(chance(
+		"optional_suffix",
+		0.85,
+		pick("sx", "name".to_string(), "suffix".to_string()),
+	))
+	.with_rule(weighted_choice(
+		"element",
+		vec![
+			(60, Box::new(lit("Mundane"))),
+			(18, Box::new(lit("Flaming"))),
+			(12, Box::new(lit("Frosted"))),
+			(7, Box::new(lit("Storm-touched"))),
+			(3, Box::new(lit("Voidbound"))),
+		],
+	))
+	.generate()?;
+
+let name = ctx.get_previous("weapon_name").unwrap().value.as_str();
+let element = ctx.get_previous("element").unwrap().value.as_str();
+println!("{} {}", element, name);
 ```
 
 ## living reference
 
 for up-to-date usage, run and read:
 
-- [examples/test.rs](examples/test.rs)
-- [examples/generation_0_5.rs](examples/generation_0_5.rs)
+- [examples/main.rs](examples/main.rs)
 
 ```bash
-cargo run --example test
-cargo run --example generation_0_5
+cargo run --example main
 ```
 
 ## development
 
 ```bash
 cargo test
-cargo run --example test
+cargo run --example main
 ```
 
 ## 1.0 readme plan
@@ -89,6 +109,5 @@ the full readme will be finalized at 1.0 and will include:
 
 - stable api guarantees
 - full data format specification
-- migration guidance from pre-1.0 releases
 - complete examples and integration patterns
-- docs and api reference via Starlight docs pages
+- docs and api reference via docs pages
