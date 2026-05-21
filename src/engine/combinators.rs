@@ -1,36 +1,41 @@
 //! standard combinator functions that each return a [`Rule`].
 
-use rand::Rng;
+use rand::{Rng, RngExt};
 
-use super::{AethelError, ComposedValue, InlineRule, GenerationContext, Rule};
+use super::{AethelError, ComposedValue, GenerationContext, InlineRule, Rule};
 
 /// selects a random value from the pool identified by `section` and `field`.
 pub fn pick(
     name: impl Into<String>,
-    section: String,
-    field: String,
+    section: impl Into<String>,
+    field: impl Into<String>,
 ) -> impl Rule + 'static {
-    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
-        let values = ctx
-            .corpus
-            .pooled_values_for_field_section(&field, &section)
-            .ok_or_else(|| AethelError::PoolNotFound {
-                section: section.clone(),
-                field: field.clone(),
-            })?;
+    let section = section.into();
+    let field = field.into();
+    InlineRule::new(
+        name,
+        move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+            let values = ctx
+                .corpus
+                .pooled_values_for_field_section(&field, &section)
+                .ok_or_else(|| AethelError::PoolNotFound {
+                    section: section.clone(),
+                    field: field.clone(),
+                })?;
 
-        if values.is_empty() {
-            return Err(AethelError::Custom("pool is empty".to_string()));
-        }
+            if values.is_empty() {
+                return Err(AethelError::Custom("pool is empty".to_string()));
+            }
 
-        let index = (rng.next_u32() as usize) % values.len();
-        let selected = &values[index];
+            let index = rng.random_range(0..values.len());
+            let selected = &values[index];
 
-        Ok(ComposedValue {
-            value: selected.value.clone(),
-            provenance: selected.provenance.clone(),
-        })
-    })
+            Ok(ComposedValue {
+                value: selected.value.clone(),
+                provenance: selected.provenance.clone(),
+            })
+        },
+    )
 }
 
 /// executes `rule_a` and `rule_b` sequentially and merges their results into one [`ComposedValue`].
@@ -39,11 +44,14 @@ pub fn concat(
     rule_a: impl Rule + 'static,
     rule_b: impl Rule + 'static,
 ) -> impl Rule + 'static {
-    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
-        let val_a = rule_a.execute(ctx, rng)?;
-        let val_b = rule_b.execute(ctx, rng)?;
-        Ok(val_a.merge(val_b))
-    })
+    InlineRule::new(
+        name,
+        move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+            let val_a = rule_a.execute(ctx, rng)?;
+            let val_b = rule_b.execute(ctx, rng)?;
+            Ok(val_a.merge(val_b))
+        },
+    )
 }
 
 /// tries `primary`; on any error executes `secondary` instead.
@@ -52,12 +60,13 @@ pub fn fallback(
     primary: impl Rule + 'static,
     secondary: impl Rule + 'static,
 ) -> impl Rule + 'static {
-    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
-        match primary.execute(ctx, rng) {
+    InlineRule::new(
+        name,
+        move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| match primary.execute(ctx, rng) {
             Ok(val) => Ok(val),
             Err(_) => secondary.execute(ctx, rng),
-        }
-    })
+        },
+    )
 }
 
 /// performs a single weighted RNG roll to select and execute one rule from `choices`.
@@ -67,28 +76,31 @@ pub fn weighted_choice(
     name: impl Into<String>,
     choices: Vec<(u32, Box<dyn Rule>)>,
 ) -> impl Rule + 'static {
-    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
-        let total_weight: u32 = choices.iter().map(|(w, _)| w).sum();
+    InlineRule::new(
+        name,
+        move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+            let total_weight: u32 = choices.iter().map(|(w, _)| w).sum();
 
-        if total_weight == 0 {
-            return Err(AethelError::Custom(
-                "weighted choice has a total weight of 0".to_string(),
-            ));
-        }
-
-        let mut roll = rng.next_u32() % total_weight;
-
-        for (weight, rule) in &choices {
-            if roll < *weight {
-                return rule.execute(ctx, rng);
+            if total_weight == 0 {
+                return Err(AethelError::Custom(
+                    "weighted choice has a total weight of 0".to_string(),
+                ));
             }
-            roll -= weight;
-        }
 
-        Err(AethelError::Custom(
-            "mathematical error in weighted choice".to_string(),
-        ))
-    })
+            let mut roll = rng.random_range(0..total_weight);
+
+            for (weight, rule) in &choices {
+                if roll < *weight {
+                    return rule.execute(ctx, rng);
+                }
+                roll -= weight;
+            }
+
+            Err(AethelError::Custom(
+                "mathematical error in weighted choice".to_string(),
+            ))
+        },
+    )
 }
 
 /// evaluates `probability` (0.0–1.0) against a single RNG roll.
@@ -98,25 +110,32 @@ pub fn chance(
     probability: f64,
     rule: impl Rule + 'static,
 ) -> impl Rule + 'static {
-    InlineRule::new(name, move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
-        let roll = (rng.next_u32() as f64) / (u32::MAX as f64);
+    InlineRule::new(
+        name,
+        move |ctx: &GenerationContext<'_>, rng: &mut dyn Rng| {
+            let probability = probability.clamp(0.0, 1.0);
+            let roll = rng.random::<f64>();
 
-        if roll <= probability {
-            rule.execute(ctx, rng)
-        } else {
-            Ok(ComposedValue {
-                value: String::new(),
-                provenance: Vec::new(),
-            })
-        }
-    })
+            if roll < probability {
+                rule.execute(ctx, rng)
+            } else {
+                Ok(ComposedValue {
+                    value: String::new(),
+                    provenance: Vec::new(),
+                })
+            }
+        },
+    )
 }
 /// returns a rule that always produces a fixed string with no provenance.
 pub fn lit(text: &'static str) -> impl Rule + 'static {
-    InlineRule::new(text, move |_ctx: &GenerationContext<'_>, _rng: &mut dyn Rng| {
-        Ok(ComposedValue {
-            value: text.to_string(),
-            provenance: vec![],
-        })
-    })
+    InlineRule::new(
+        text,
+        move |_ctx: &GenerationContext<'_>, _rng: &mut dyn Rng| {
+            Ok(ComposedValue {
+                value: text.to_string(),
+                provenance: vec![],
+            })
+        },
+    )
 }

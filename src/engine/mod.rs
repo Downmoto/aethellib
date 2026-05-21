@@ -102,8 +102,11 @@ where
 
 // == Engine ===================================================================
 
-/// orchestrates an ordered sequence of [`Rule`]s against a [`Corpus`] using a
-/// seeded RNG to ensure deterministic outputs.
+/// orchestrates an ordered sequence of [`Rule`]s against a [`Corpus`].
+///
+/// determinism depends on the caller supplying a seeded RNG. passing a
+/// non-deterministic RNG (e.g. one seeded from system entropy) will produce
+/// non-deterministic outputs.
 pub struct Engine<'a, R: Rng> {
     corpus: &'a Corpus,
     rng: R,

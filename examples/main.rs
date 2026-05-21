@@ -1,17 +1,12 @@
+use aethellib::engine::combinators::{chance, concat, lit, pick, weighted_choice};
 use aethellib::prelude::*;
-use aethellib::engine::combinators::{chance, concat, pick, weighted_choice, lit};
 
 fn main() {
-    let corpus = Corpus::from_files(
-        &["data/weapon_test_data.toml"],
-        "weapon",
-        None,
-        None,
-    )
-    .expect("failed to load weapon corpus");
+    let corpus = Corpus::from_files(&["data/weapon_test_data.toml"], "weapon", None, None)
+        .expect("failed to load weapon corpus");
 
     let ctx = Engine::new(&corpus, rand::rng())
-        // weapon name: "<prefix> <type> [<suffix>]" — suffix is added 60 % of the time
+        // weapon name: "<prefix> <type> [<suffix>]" — suffix is added 85 % of the time
         .with_rule(concat(
             "weapon_name",
             concat(
@@ -34,11 +29,23 @@ fn main() {
             ),
         ))
         // quality
-        .with_rule(pick("rarity",    "qualities".to_string(), "rarity".to_string()))
-        .with_rule(pick("condition", "qualities".to_string(), "condition".to_string()))
+        .with_rule(pick(
+            "rarity",
+            "qualities".to_string(),
+            "rarity".to_string(),
+        ))
+        .with_rule(pick(
+            "condition",
+            "qualities".to_string(),
+            "condition".to_string(),
+        ))
         // visuals
-        .with_rule(pick("material", "visuals".to_string(), "materials".to_string()))
-        .with_rule(pick("accent",   "visuals".to_string(), "accents".to_string()))
+        .with_rule(pick(
+            "material",
+            "visuals".to_string(),
+            "materials".to_string(),
+        ))
+        .with_rule(pick("accent", "visuals".to_string(), "accents".to_string()))
         // weighted elemental trait: mundane is intentionally most common
         .with_rule(weighted_choice(
             "element",

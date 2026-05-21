@@ -8,11 +8,11 @@ pub mod engine;
 pub mod prelude {
     //! prelude exports for common aethellib workflows.
 
-    pub use crate::corpus::types::{Document, DocumentMetadata, Field, Section, Target};
-    pub use crate::corpus::{Corpus, CorpusBuilder, PooledValue, ValuePool, ValueProvenance};
     pub use crate::corpus::error::{CorpusLoaderError, CorpusLoaderErrorKind};
+    pub use crate::corpus::types::{Document, DocumentMetadata, Field, Section, Target};
     pub use crate::corpus::utils::{CorpusLoaderOptions, LoadValidator};
+    pub use crate::corpus::{Corpus, CorpusBuilder, PooledValue, ValuePool, ValueProvenance};
 
-    pub use crate::engine::{ComposedValue, InlineRule, Engine, GenerationContext, Rule};
     pub use crate::engine::error::AethelError;
+    pub use crate::engine::{ComposedValue, Engine, GenerationContext, InlineRule, Rule};
 }
